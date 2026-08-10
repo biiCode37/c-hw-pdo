@@ -262,10 +262,22 @@
     letter-spacing:0.02em; line-height:1;}
   /* Status "berangkat sekarang" (t=0, sebelum baris berikutnya diambil alih index) */
   .papan-countdown-bar.now .pcb-time{color:var(--amber);}
-  /* Alert neon merah berkedip — aktif saat tersisa <= 1 menit menuju keberangkatan */
+  /* Mode siaga / countdown > 1 menit — kuning berkedip halus */
+  .papan-countdown-bar.yellow-alert{background:rgba(255,176,32,0.12); border-bottom-color:var(--amber-dim);
+    animation:papanYellowBgPulse 2.5s ease-in-out infinite;}
+  .papan-countdown-bar.yellow-alert .pcb-label{color:var(--amber-dim);}
+  .papan-countdown-bar.yellow-alert .pcb-unit{color:var(--amber);}
+  .papan-countdown-bar.yellow-alert .pcb-icon{color:var(--amber); animation:papanYellowTextPulse 2.5s ease-in-out infinite;}
+  .papan-countdown-bar.yellow-alert .pcb-time{color:var(--amber); animation:papanYellowTextPulse 2.5s ease-in-out infinite;
+    text-shadow:0 0 12px rgba(255,176,32,0.4);}
+  @keyframes papanYellowBgPulse{0%,100%{background-color:rgba(255,176,32,0.08);} 50%{background-color:rgba(255,176,32,0.22);}}
+  @keyframes papanYellowTextPulse{0%,100%{opacity:1;} 50%{opacity:0.55;}}
+
+  /* Alert neon merah berkedip — penegas unit bersiap saat tersisa <= 1 menit (-1 menit) menuju keberangkatan */
   .papan-countdown-bar.warning{background:rgba(255,45,45,0.14); border-bottom-color:#FF2D2D;
     animation:papanCountdownBgPulse 1s steps(2,jump-none) infinite;}
   .papan-countdown-bar.warning .pcb-label{color:#FFB3AC;}
+  .papan-countdown-bar.warning .pcb-unit{color:#FFFFFF;}
   .papan-countdown-bar.warning .pcb-icon{animation:papanCountdownBgPulse 1s steps(2,jump-none) infinite;}
   .papan-countdown-bar.warning .pcb-time{color:#FF3B3B;
     animation:papanCountdownTextPulse .6s ease-in-out infinite;
@@ -273,6 +285,7 @@
   @keyframes papanCountdownBgPulse{0%,100%{background-color:rgba(255,45,45,0.14);} 50%{background-color:rgba(255,45,45,0.38);}}
   @keyframes papanCountdownTextPulse{0%,100%{opacity:1;} 50%{opacity:0.32;}}
   @media (prefers-reduced-motion: reduce){
+    .papan-countdown-bar.yellow-alert, .papan-countdown-bar.yellow-alert .pcb-time, .papan-countdown-bar.yellow-alert .pcb-icon,
     .papan-countdown-bar.warning, .papan-countdown-bar.warning .pcb-time, .papan-countdown-bar.warning .pcb-icon{animation:none;}
   }
   .papan-topbar{display:flex; align-items:center; justify-content:space-between; gap:16px;
@@ -525,8 +538,8 @@
        Berubah jadi alert neon merah berkedip + bunyi saat tersisa 1 menit. -->
   <div class="papan-countdown-bar" id="papanCountdownBar">
     <span class="pcb-icon" id="papanCountdownIcon" aria-hidden="true">&#9203;</span>
-    <span class="pcb-label" id="papanCountdownLabel">Berangkat berikutnya</span>
     <span class="pcb-unit" id="papanCountdownUnit">&mdash;</span>
+    <span class="pcb-label" id="papanCountdownLabel">BERANGKAT DALAM</span>
     <span class="pcb-time" id="papanCountdownTime">--:--</span>
   </div>
   <div class="papan-topbar">
@@ -1645,7 +1658,7 @@
     aoa.push([meta.footer]);
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{wch:8},{wch:9},{wch:14},{wch:15},{wch:16},{wch:10}];
+    ws['!cols'] = [{wch:6},{wch:8},{wch:15},{wch:14},{wch:22},{wch:12}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Jadwal Berangkat');
     XLSX.writeFile(wb, 'Jadwal_Berangkat_' + dateStamp() + '.xlsx');
@@ -1657,60 +1670,66 @@
     const s = lastSchedule;
     const exRows = rows || s.rows;
     // Palet kontras-aman: tinta gelap netral untuk SEMUA teks substantif.
-    // Amber cuma dipakai di elemen solid (border/badge), bukan teks-di-atas-tint.
     const INK = '#1A1D23';        // teks utama
-    const INK_MUTED = '#4B5563';  // teks sekunder (No, interval, subjudul) - kontras ~7:1 di atas putih
-    const AMBER = '#92400E';      // amber gelap untuk teks jam & aksen - kontras ~5.3:1 di atas putih
+    const INK_MUTED = '#4B5563';  // teks sekunder
+    const AMBER = '#92400E';      // amber gelap untuk teks jam
     const AMBER_BORDER = '#96490F';
-    const BLUE = '#1D4E89';       // aksen biru untuk divider perubahan interval - kontras aman di atas putih/abu muda
+    const BLUE = '#1D4E89';
     const BAND_ALT = '#F6F7F9';
     const DIVIDER_BG = '#EEF0F3';
     const BLUE_BG = '#EAF1FA';
     const BORDER = '#E3E5E9';
 
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:fixed; left:-99999px; top:0; width:760px; background:#ffffff; color:' + INK + '; font-family:Inter,system-ui,sans-serif; padding:28px;';
+    wrap.style.cssText = 'position:fixed; left:-99999px; top:0; width:640px; background:#ffffff; color:' + INK + '; font-family:Inter,system-ui,sans-serif; padding:24px; box-sizing:border-box;';
 
     let html = '';
-    html += '<div style="text-align:center; margin-bottom:18px; border-bottom:2px solid ' + INK + '; padding-bottom:14px;">';
-    html += '<div style="font-family:\'Space Mono\',monospace; font-size:20px; font-weight:700; letter-spacing:0.06em; color:' + INK + ';">JADWAL KEBERANGKATAN</div>';
-    html += '<div style="font-size:12.5px; color:' + INK + '; margin-top:6px; font-weight:700;">Rute ' + meta.kodeRute + ' &nbsp;&middot;&nbsp; Shift ' + meta.shift + '</div>';
-    html += '<div style="font-size:12.5px; color:' + INK_MUTED + '; margin-top:5px; font-weight:600;">' + meta.hari + ', ' + meta.tanggal + '</div>';
-    html += '<div style="font-size:11.5px; color:' + INK_MUTED + '; margin-top:6px;">' + exRows[0].jam + ' &ndash; ' + exRows[exRows.length-1].jam + ' &nbsp;&middot;&nbsp; ' + exRows.length + ' keberangkatan &nbsp;&middot;&nbsp; ' + s.N + ' unit &nbsp;&middot;&nbsp; Ritase ' + meta.ritaseRange + '</div>';
+    html += '<div style="text-align:center; margin-bottom:16px; border-bottom:2px solid ' + INK + '; padding-bottom:12px;">';
+    html += '<div style="font-family:\'Space Mono\',monospace; font-size:18px; font-weight:700; letter-spacing:0.06em; color:' + INK + ';">JADWAL KEBERANGKATAN</div>';
+    html += '<div style="font-size:12px; color:' + INK + '; margin-top:5px; font-weight:700;">Rute ' + meta.kodeRute + ' &nbsp;&middot;&nbsp; Shift ' + meta.shift + '</div>';
+    html += '<div style="font-size:12px; color:' + INK_MUTED + '; margin-top:4px; font-weight:600;">' + meta.hari + ', ' + meta.tanggal + '</div>';
+    html += '<div style="font-size:11px; color:' + INK_MUTED + '; margin-top:5px;">' + exRows[0].jam + ' &ndash; ' + exRows[exRows.length-1].jam + ' &nbsp;&middot;&nbsp; ' + exRows.length + ' keberangkatan &nbsp;&middot;&nbsp; ' + s.N + ' unit &nbsp;&middot;&nbsp; Ritase ' + meta.ritaseRange + '</div>';
     html += '</div>';
 
-    html += '<table style="width:100%; border-collapse:collapse; font-size:12px;">';
+    html += '<table style="width:100%; max-width:540px; margin:0 auto; border-collapse:collapse; font-size:12px; table-layout:fixed;">';
+    html += '<colgroup>' +
+      '<col style="width:44px;">' +
+      '<col style="width:44px;">' +
+      '<col style="width:170px;">' +
+      '<col style="width:100px;">' +
+      '<col style="width:140px;">' +
+      '</colgroup>';
     html += '<thead><tr>' +
-      '<th style="padding:9px 10px; text-align:left; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">No</th>' +
-      '<th style="padding:9px 10px; text-align:center; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">Rit</th>' +
-      '<th style="padding:9px 10px; text-align:left; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">Unit</th>' +
-      '<th style="padding:9px 10px; text-align:right; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">Jam</th>' +
-      '<th style="padding:9px 10px; text-align:right; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">Interval Headway</th>' +
+      '<th style="padding:7px 8px; text-align:center; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">No</th>' +
+      '<th style="padding:7px 8px; text-align:center; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">Rit</th>' +
+      '<th style="padding:7px 8px; text-align:left; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">Unit</th>' +
+      '<th style="padding:7px 8px; text-align:center; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">Jam</th>' +
+      '<th style="padding:7px 8px; text-align:center; background:' + INK + '; color:#fff; border:1px solid ' + INK + ';">Interval Headway</th>' +
       '</tr></thead><tbody>';
 
     const marks = annotateRows(exRows);
     exRows.forEach((r, idx) => {
       const m = marks[idx];
       if (m.ritaseDivider){
-        html += '<tr><td colspan="5" style="background:' + DIVIDER_BG + '; color:' + INK + '; font-weight:700; padding:7px 10px 7px 12px; border:1px solid ' + BORDER + '; border-left:4px solid ' + AMBER_BORDER + '; font-family:\'Space Mono\',monospace; font-size:10.5px; letter-spacing:0.12em;">RITASE ' + r.ritase + '</td></tr>';
+        html += '<tr><td colspan="5" style="background:' + DIVIDER_BG + '; color:' + INK + '; font-weight:700; padding:6px 10px; border:1px solid ' + BORDER + '; border-left:4px solid ' + AMBER_BORDER + '; font-family:\'Space Mono\',monospace; font-size:10px; letter-spacing:0.1em;">RITASE ' + r.ritase + '</td></tr>';
       }
       if (m.intervalDivider){
         const note = m.intervalDivider.peakNote ? (' &mdash; ' + m.intervalDivider.peakNote) : '';
-        html += '<tr><td colspan="5" style="background:' + BLUE_BG + '; color:' + BLUE + '; font-weight:700; padding:6px 10px 6px 12px; border:1px solid ' + BORDER + '; border-left:4px solid ' + BLUE + '; font-family:\'Space Mono\',monospace; font-size:9.5px; letter-spacing:0.04em;">Interval headway berubah dari ' + m.intervalDivider.from + ' menit menjadi ' + m.intervalDivider.to + ' menit' + note + '</td></tr>';
+        html += '<tr><td colspan="5" style="background:' + BLUE_BG + '; color:' + BLUE + '; font-weight:700; padding:5px 10px; border:1px solid ' + BORDER + '; border-left:4px solid ' + BLUE + '; font-family:\'Space Mono\',monospace; font-size:9.5px; letter-spacing:0.03em;">Interval headway berubah dari ' + m.intervalDivider.from + 'm menjadi ' + m.intervalDivider.to + 'm' + note + '</td></tr>';
       }
       const rowBg = idx % 2 === 0 ? '#ffffff' : BAND_ALT;
       const leftBorder = r.isPeak ? ('border-left:3px solid ' + AMBER_BORDER + ';') : 'border-left:1px solid ' + BORDER + ';';
-      const badge = r.isPeak ? ' <span style="display:inline-block; background:' + AMBER_BORDER + '; color:#ffffff; font-size:8.5px; font-weight:700; letter-spacing:0.03em; padding:2px 6px; border-radius:3px; margin-left:6px; vertical-align:middle;">JAM SIBUK</span>' : '';
+      const badge = r.isPeak ? ' <span style="display:inline-block; background:' + AMBER_BORDER + '; color:#ffffff; font-size:8px; font-weight:700; letter-spacing:0.02em; padding:1px 5px; border-radius:3px; margin-left:4px; vertical-align:middle;">JAM SIBUK</span>' : '';
       html += '<tr style="background:' + rowBg + ';">' +
-        '<td style="padding:7px 10px; border:1px solid ' + BORDER + '; ' + leftBorder + ' color:' + INK_MUTED + '; font-family:\'Space Mono\',monospace; font-size:11px;">' + String(r.no).padStart(2,'0') + '</td>' +
-        '<td style="padding:7px 10px; border:1px solid ' + BORDER + '; text-align:center; color:' + INK + '; font-weight:600;">' + r.ritase + '</td>' +
-        '<td style="padding:7px 10px; border:1px solid ' + BORDER + '; font-weight:700; color:' + INK + ';">' + r.unit + badge + '</td>' +
-        '<td style="padding:7px 10px; border:1px solid ' + BORDER + '; text-align:right; font-weight:700; color:' + AMBER + '; font-family:\'Space Mono\',monospace;">' + r.jam + '</td>' +
-        '<td style="padding:7px 10px; border:1px solid ' + BORDER + '; text-align:right; color:' + INK_MUTED + '; font-family:\'Space Mono\',monospace; font-size:11px;">' + (r.interval !== null ? '+' + r.interval + 'm' : '&mdash;') + '</td>' +
+        '<td style="padding:6px 8px; border:1px solid ' + BORDER + '; ' + leftBorder + ' color:' + INK_MUTED + '; font-family:\'Space Mono\',monospace; font-size:11px; text-align:center;">' + String(r.no).padStart(2,'0') + '</td>' +
+        '<td style="padding:6px 8px; border:1px solid ' + BORDER + '; text-align:center; color:' + INK + '; font-weight:600;">' + r.ritase + '</td>' +
+        '<td style="padding:6px 8px; border:1px solid ' + BORDER + '; font-weight:700; color:' + INK + '; text-align:left;">' + escapeHtml(String(r.unit)) + badge + '</td>' +
+        '<td style="padding:6px 8px; border:1px solid ' + BORDER + '; text-align:center; font-weight:700; color:' + AMBER + '; font-family:\'Space Mono\',monospace;">' + r.jam + '</td>' +
+        '<td style="padding:6px 8px; border:1px solid ' + BORDER + '; text-align:center; color:' + INK_MUTED + '; font-family:\'Space Mono\',monospace; font-size:11px;">' + (r.interval !== null ? '+' + r.interval + ' menit' : '&mdash;') + '</td>' +
         '</tr>';
     });
     html += '</tbody></table>';
-    html += '<div style="margin-top:18px; padding-top:12px; border-top:1px solid ' + BORDER + '; font-size:10.5px; color:' + INK_MUTED + '; text-align:center; font-weight:600;">' + meta.footer + '</div>';
+    html += '<div style="margin-top:16px; padding-top:10px; border-top:1px solid ' + BORDER + '; font-size:10px; color:' + INK_MUTED + '; text-align:center; font-weight:600;">' + meta.footer + '</div>';
 
     wrap.innerHTML = html;
     document.body.appendChild(wrap);
@@ -1849,8 +1868,8 @@
   // lalu masuk mode alert neon merah berkedip + bunyi peringatan saat tersisa 1 menit.
   function updatePapanCountdown(nextIdx, now){
     if (nextIdx === -1 || nextIdx === null || !lastSchedule || !lastSchedule.rows.length){
-      papanCountdownBar.classList.remove('warning');
-      papanCountdownLabel.textContent = 'Jadwal keberangkatan';
+      papanCountdownBar.classList.remove('warning', 'yellow-alert');
+      papanCountdownLabel.textContent = 'JADWAL KEBERANGKATAN';
       papanCountdownUnit.textContent = '\u2014';
       papanCountdownTime.textContent = 'SELESAI';
       if (countdownWarningActive){ countdownWarningActive = false; stopCountdownWarningSound(); }
@@ -1865,17 +1884,18 @@
     const mm = String(Math.floor(diffSec/60)).padStart(2,'0');
     const ss = String(diffSec%60).padStart(2,'0');
 
-    papanCountdownLabel.textContent = isNow ? 'Sedang berangkat' : 'Berangkat berikutnya';
-    papanCountdownUnit.textContent = 'UNIT ' + row.unit;
+    const uStr = String(row.unit).toUpperCase();
+    papanCountdownUnit.textContent = uStr.startsWith('UNIT') ? uStr : ('UNIT ' + uStr);
+    papanCountdownLabel.textContent = isNow ? 'SEDANG BERANGKAT' : 'BERANGKAT DALAM';
     papanCountdownTime.textContent = mm + ':' + ss;
 
-    const showNeon = diffSec <= 60; // tampilan neon merah aktif 60 detik terakhir (termasuk saat 00:00)
-    // Bunyi peringatan hanya selama hitung mundur masih berjalan (1..60 detik) — begitu waktu
-    // keberangkatan tercapai (00:00), alarm utama (checkAlarmTriggers) yang ambil alih bunyinya,
-    // supaya tidak dobel dengan bunyi alarm "Saatnya Berangkat".
-    const shouldSound = diffSec > 0 && diffSec <= 60;
+    // Alert warna merah hanya saat waktu keberangkatan unit <= 1 menit (60 detik terakhir).
+    // Jika countdown belum -1 menit (> 60 detik), tampilkan warna kuning berkedip halus.
+    const isRedWarning = diffSec <= 60;
+    papanCountdownBar.classList.toggle('warning', isRedWarning);
+    papanCountdownBar.classList.toggle('yellow-alert', !isRedWarning);
 
-    papanCountdownBar.classList.toggle('warning', showNeon);
+    const shouldSound = diffSec > 0 && diffSec <= 60;
     if (shouldSound){
       if (!countdownWarningActive){
         countdownWarningActive = true;
@@ -1888,25 +1908,41 @@
     }
   }
 
+  let lastDismissedIdx = -1;
+
   function updatePapanHighlight(){
     if (!lastSchedule || !lastSchedule.rows || !papanOverlay.classList.contains('show')) return;
     const now = new Date();
     const nowMin = now.getHours()*60 + now.getMinutes();
+
     let nextIdx = -1;
-    for (let i=0;i<lastSchedule.rows.length;i++){
-      if (toMinutes(lastSchedule.rows[i].jam) >= nowMin){ nextIdx = i; break; }
+    if (activeAlarmRows && activeAlarmRows.length > 0){
+      // Sedang ada alarm "Saatnya Berangkat" yang tampil — highlight unit yang sedang alarm
+      let minIdx = Infinity;
+      activeAlarmRows.forEach(r => {
+        if (typeof r._idx === 'number' && r._idx < minIdx) minIdx = r._idx;
+      });
+      nextIdx = minIdx !== Infinity ? minIdx : 0;
+    } else if (lastDismissedIdx >= 0){
+      // Ketika alarm "Saatnya Berangkat" sudah ditutup/tertutup otomatis, highlight langsung pindah ke unit berikutnya
+      const candidate = lastDismissedIdx + 1;
+      nextIdx = candidate < lastSchedule.rows.length ? candidate : -1;
+    } else {
+      // Belum ada alarm yang ditutup/muncul hari ini — highlight unit terdekat >= jam sekarang
+      for (let i=0; i<lastSchedule.rows.length; i++){
+        if (toMinutes(lastSchedule.rows[i].jam) >= nowMin){ nextIdx = i; break; }
+      }
     }
+
     papanBoardBody.querySelectorAll('.papan-row').forEach(el => {
       const idx = parseInt(el.getAttribute('data-ridx'), 10);
       el.classList.toggle('next-up', idx === nextIdx);
       el.classList.toggle('done', nextIdx === -1 ? true : idx < nextIdx);
     });
+
     updatePapanCountdown(nextIdx, now);
     const indexChanged = nextIdx !== lastPapanNextIdx;
     if (indexChanged) lastPapanNextIdx = nextIdx;
-    // Dipanggil tiap detik (bukan cuma saat index berubah) supaya daftar benar-benar auto
-    // scroll terus selama mode papan display aktif — fungsinya sendiri sudah no-op kalau
-    // baris highlight memang sudah pas di tengah, jadi tidak bikin layar "gemetar".
     centerPapanHighlight(true);
   }
 
@@ -1942,11 +1978,6 @@
     papanOverlay.classList.add('show');
     renderPapanBoard();
     requestWakeLock();
-    // PENTING: fullscreen-kan seluruh dokumen (documentElement), BUKAN papanOverlay saja.
-    // Fullscreen API hanya merender elemen yang di-fullscreen-kan beserta turunannya — kalau
-    // yang di-fullscreen-kan cuma papanOverlay, alarm-overlay (sibling-nya, di luar subtree
-    // itu) jadi tidak akan pernah tampak di layar selama mode papan sedang fullscreen.
-    // Fullscreen di seluruh dokumen membuat semua overlay tetap ikut ter-render normal.
     const docEl = document.documentElement;
     const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
     if (req){ try{ req.call(docEl).catch(()=>{}); }catch(e){} }
@@ -1956,7 +1987,7 @@
     papanOverlay.classList.remove('show');
     releaseWakeLock();
     if (countdownWarningActive){ countdownWarningActive = false; stopCountdownWarningSound(); }
-    papanCountdownBar.classList.remove('warning');
+    papanCountdownBar.classList.remove('warning', 'yellow-alert');
     if (document.fullscreenElement){ document.exitFullscreen().catch(()=>{}); }
     else if (document.webkitFullscreenElement && document.webkitExitFullscreen){ document.webkitExitFullscreen(); }
   }
@@ -1964,8 +1995,6 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && papanOverlay.classList.contains('show')) closePapanMode(); });
 
   // ===== Alarm Keberangkatan (bunyi + tampilan penuh, aktif di mode apapun) =====
-  // Kalau 2+ unit berangkat di menit yang sama (atau alarm baru masuk selagi overlay
-  // masih terbuka), semuanya digabung tampil sekaligus dalam satu overlay — bukan antre satu-satu.
   const alarmOverlay = $('alarmOverlay'), alarmOkBtn = $('alarmOkBtn'), alarmUnitsList = $('alarmUnitsList');
 
   let firedRowKeys = new Set();
@@ -1975,6 +2004,7 @@
 
   function resetAlarmTracking(){
     firedRowKeys = new Set();
+    lastDismissedIdx = -1;
     if (alarmAutoStopTimer){ clearTimeout(alarmAutoStopTimer); alarmAutoStopTimer = null; }
     stopAlarmSound();
     alarmOverlay.classList.remove('show');
@@ -1988,10 +2018,6 @@
     if (audioCtx && audioCtx.state === 'suspended'){ audioCtx.resume().catch(()=>{}); }
     return audioCtx;
   }
-  // Browser modern blokir autoplay suara tanpa interaksi user duluan — begitu dispatcher
-  // sentuh layar sekali (buka app/pindah tab dll), audio context langsung "dibuka" di sini,
-  // jadi alarm otomatis nanti tetap bisa bunyi. Tombol OK di kartu alarm jadi jaring pengaman
-  // terakhir kalau ternyata browser tetap membisukan audio.
   document.addEventListener('pointerdown', ensureAudioCtx, { passive:true });
 
   function beep(freq, duration, when){
@@ -2042,12 +2068,7 @@
     alarmAutoStopTimer = setTimeout(dismissAlarm, durSec * 1000);
   }
 
-  // Menambahkan baris keberangkatan yang baru "jatuh tempo" ke alarm yang sedang tampil
-  // (kalau belum ada alarm, ini yang membuka overlay-nya). Timer auto-stop diulang dari awal
-  // supaya operator tetap dapat durasi penuh untuk melihat daftar unit yang terbaru & lengkap.
   function addRowsToAlarm(rows){
-    // Alarm utama "Saatnya Berangkat" ambil alih — matikan bunyi peringatan 1-menit di bar
-    // countdown papan display supaya dua bunyi alarm tidak dobel bersamaan.
     if (countdownWarningActive){ countdownWarningActive = false; stopCountdownWarningSound(); }
     rows.forEach(r => {
       if (!activeAlarmRows.some(x => x.no === r.no)) activeAlarmRows.push(r);
@@ -2063,7 +2084,15 @@
     if (alarmAutoStopTimer){ clearTimeout(alarmAutoStopTimer); alarmAutoStopTimer = null; }
     stopAlarmSound();
     alarmOverlay.classList.remove('show');
+    if (activeAlarmRows && activeAlarmRows.length > 0){
+      activeAlarmRows.forEach(r => {
+        if (typeof r._idx === 'number' && r._idx > lastDismissedIdx){
+          lastDismissedIdx = r._idx;
+        }
+      });
+    }
     activeAlarmRows = [];
+    updatePapanHighlight();
   }
   alarmOkBtn.addEventListener('click', dismissAlarm);
 
@@ -2072,12 +2101,12 @@
     if (!lastSchedule || !lastSchedule.rows || !lastSchedule.rows.length) return;
     const hhmm = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     const due = [];
-    lastSchedule.rows.forEach(r => {
+    lastSchedule.rows.forEach((r, idx) => {
       if (r.jam !== hhmm) return;
       const key = r.no + '|' + r.jam + '|' + r.unit;
       if (firedRowKeys.has(key)) return;
       firedRowKeys.add(key);
-      due.push(r);
+      due.push({ ...r, _idx: idx });
     });
     if (due.length) addRowsToAlarm(due);
   }
