@@ -263,27 +263,28 @@
   /* Status "berangkat sekarang" (t=0, sebelum baris berikutnya diambil alih index) */
   .papan-countdown-bar.now .pcb-time{color:var(--amber);}
   /* Mode siaga / countdown > 1 menit — kuning berkedip halus */
-  .papan-countdown-bar.yellow-alert{background:rgba(255,176,32,0.12); border-bottom-color:var(--amber-dim);
-    animation:papanYellowBgPulse 2.5s ease-in-out infinite;}
-  .papan-countdown-bar.yellow-alert .pcb-label{color:var(--amber-dim);}
-  .papan-countdown-bar.yellow-alert .pcb-unit{color:var(--amber);}
-  .papan-countdown-bar.yellow-alert .pcb-icon{color:var(--amber); animation:papanYellowTextPulse 2.5s ease-in-out infinite;}
-  .papan-countdown-bar.yellow-alert .pcb-time{color:var(--amber); animation:papanYellowTextPulse 2.5s ease-in-out infinite;
-    text-shadow:0 0 12px rgba(255,176,32,0.4);}
-  @keyframes papanYellowBgPulse{0%,100%{background-color:rgba(255,176,32,0.08);} 50%{background-color:rgba(255,176,32,0.22);}}
-  @keyframes papanYellowTextPulse{0%,100%{opacity:1;} 50%{opacity:0.55;}}
+  .papan-countdown-bar.yellow-alert{background:rgba(217,140,0,0.45); border-bottom-color:#FFB020;
+    animation:papanYellowBgPulse 2.2s ease-in-out infinite;}
+  .papan-countdown-bar.yellow-alert .pcb-label,
+  .papan-countdown-bar.yellow-alert .pcb-unit,
+  .papan-countdown-bar.yellow-alert .pcb-icon,
+  .papan-countdown-bar.yellow-alert .pcb-time{color:#FFFFFF !important; text-shadow:0 1px 4px rgba(0,0,0,0.6);}
+  .papan-countdown-bar.yellow-alert .pcb-icon,
+  .papan-countdown-bar.yellow-alert .pcb-time{animation:papanYellowTextPulse 2.2s ease-in-out infinite;}
+  @keyframes papanYellowBgPulse{0%,100%{background-color:rgba(190,120,0,0.40);} 50%{background-color:rgba(240,165,0,0.85);}}
+  @keyframes papanYellowTextPulse{0%,100%{opacity:1;} 50%{opacity:0.85;}}
 
   /* Alert neon merah berkedip — penegas unit bersiap saat tersisa <= 1 menit (-1 menit) menuju keberangkatan */
-  .papan-countdown-bar.warning{background:rgba(255,45,45,0.14); border-bottom-color:#FF2D2D;
+  .papan-countdown-bar.warning{background:rgba(220,20,20,0.55); border-bottom-color:#FF2D2D;
     animation:papanCountdownBgPulse 1s steps(2,jump-none) infinite;}
-  .papan-countdown-bar.warning .pcb-label{color:#FFB3AC;}
-  .papan-countdown-bar.warning .pcb-unit{color:#FFFFFF;}
-  .papan-countdown-bar.warning .pcb-icon{animation:papanCountdownBgPulse 1s steps(2,jump-none) infinite;}
-  .papan-countdown-bar.warning .pcb-time{color:#FF3B3B;
-    animation:papanCountdownTextPulse .6s ease-in-out infinite;
-    text-shadow:0 0 14px rgba(255,59,59,0.95), 0 0 32px rgba(255,45,45,0.65);}
-  @keyframes papanCountdownBgPulse{0%,100%{background-color:rgba(255,45,45,0.14);} 50%{background-color:rgba(255,45,45,0.38);}}
-  @keyframes papanCountdownTextPulse{0%,100%{opacity:1;} 50%{opacity:0.32;}}
+  .papan-countdown-bar.warning .pcb-label,
+  .papan-countdown-bar.warning .pcb-unit,
+  .papan-countdown-bar.warning .pcb-icon,
+  .papan-countdown-bar.warning .pcb-time{color:#FFFFFF !important; text-shadow:0 0 8px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.7);}
+  .papan-countdown-bar.warning .pcb-icon,
+  .papan-countdown-bar.warning .pcb-time{animation:papanCountdownTextPulse .6s ease-in-out infinite;}
+  @keyframes papanCountdownBgPulse{0%,100%{background-color:rgba(200,15,15,0.50);} 50%{background-color:rgba(255,30,30,0.90);}}
+  @keyframes papanCountdownTextPulse{0%,100%{opacity:1;} 50%{opacity:0.75;}}
   @media (prefers-reduced-motion: reduce){
     .papan-countdown-bar.yellow-alert, .papan-countdown-bar.yellow-alert .pcb-time, .papan-countdown-bar.yellow-alert .pcb-icon,
     .papan-countdown-bar.warning, .papan-countdown-bar.warning .pcb-time, .papan-countdown-bar.warning .pcb-icon{animation:none;}
@@ -299,7 +300,9 @@
   .papan-exit{width:clamp(38px,4vw,54px); height:clamp(38px,4vw,54px); flex-shrink:0; border-radius:50%; border:1px solid var(--line);
     background:var(--surface); color:var(--text-muted); font-size:clamp(16px,2vw,22px); cursor:pointer;}
   .papan-exit:active{background:var(--surface-2);}
-  .papan-board-wrap{flex:1; overflow-y:auto; padding:0 clamp(18px,3vw,52px) clamp(18px,3vw,52px);}
+  .papan-board-wrap{flex:1; overflow-y:auto; padding:0 clamp(18px,3vw,52px) clamp(18px,3vw,52px);
+    scrollbar-width:none; -ms-overflow-style:none;}
+  .papan-board-wrap::-webkit-scrollbar{display:none;}
   .papan-head-row{display:grid; grid-template-columns:clamp(50px,6vw,90px) clamp(60px,6vw,90px) 1fr clamp(140px,20vw,240px);
     padding:clamp(10px,1.4vh,18px) clamp(14px,2vw,26px); position:sticky; top:0; background:var(--bg); border-bottom:2px solid var(--line);
     font-family:'Space Mono', monospace; font-size:clamp(10px,1.05vw,15px); letter-spacing:0.12em; text-transform:uppercase;
@@ -1823,7 +1826,7 @@
       el.setAttribute('data-ridx', idx);
       el.innerHTML = '<span class="no">' + String(r.no).padStart(2,'0') + '</span>' +
         '<span class="rit">' + r.ritase + '</span>' +
-        '<span class="unit">Unit ' + escapeHtml(String(r.unit)) + '</span>' +
+        '<span class="unit">' + escapeHtml(String(r.unit)) + '</span>' +
         '<span class="jam">' + r.jam + '<span class="papan-next-badge">Berikutnya</span></span>';
       papanBoardBody.appendChild(el);
     });
@@ -1884,8 +1887,7 @@
     const mm = String(Math.floor(diffSec/60)).padStart(2,'0');
     const ss = String(diffSec%60).padStart(2,'0');
 
-    const uStr = String(row.unit).toUpperCase();
-    papanCountdownUnit.textContent = uStr.startsWith('UNIT') ? uStr : ('UNIT ' + uStr);
+    papanCountdownUnit.textContent = String(row.unit).toUpperCase();
     papanCountdownLabel.textContent = isNow ? 'SEDANG BERANGKAT' : 'BERANGKAT DALAM';
     papanCountdownTime.textContent = mm + ':' + ss;
 
