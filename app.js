@@ -299,6 +299,7 @@
 
   function switchActiveRoute(routeId){
     state.activeRouteId = routeId;
+    if (typeof selectedUnitIds !== 'undefined') selectedUnitIds.clear();
     saveState();
     renderRouteBar();
     hydrateInputs();
@@ -691,37 +692,156 @@
   // ===== DAFTAR UNIT & URUTAN =====
   const unitListContainer = $('unitListContainer');
   const activeSummaryText = $('activeSummaryText');
+  const bulkUnitsBar = $('bulkUnitsBar');
+  const bulkCountText = $('bulkCountText');
+  const bulkActivateBtn = $('bulkActivateBtn');
+  const bulkDeactivateBtn = $('bulkDeactivateBtn');
+  const bulkDeleteBtn = $('bulkDeleteBtn');
+  const bulkCancelBtn = $('bulkCancelBtn');
+  const selectAllUnitsBtn = $('selectAllUnitsBtn');
+  const filterUnitsAll = $('filterUnitsAll');
+  const filterUnitsActive = $('filterUnitsActive');
+  const filterUnitsInactive = $('filterUnitsInactive');
+
+  const selectedUnitIds = new Set();
+  let unitFilter = 'all'; // 'all' | 'active' | 'inactive'
+
+  function getFilteredUnits(cur){
+    if (!cur.masterUnits) return [];
+    if (unitFilter === 'active') return cur.masterUnits.filter(u => u.active);
+    if (unitFilter === 'inactive') return cur.masterUnits.filter(u => !u.active);
+    return cur.masterUnits;
+  }
+
+  function updateBulkBar(){
+    if (!bulkUnitsBar) return;
+    const n = selectedUnitIds.size;
+    if (n > 0){
+      bulkUnitsBar.style.display = 'flex';
+      bulkCountText.textContent = n + ' unit dipilih';
+    } else {
+      bulkUnitsBar.style.display = 'none';
+    }
+  }
 
   function renderUnitList(){
     const cur = getActiveRoute();
     unitListContainer.innerHTML = '';
-    if (!cur.masterUnits || cur.masterUnits.length === 0){
-      unitListContainer.innerHTML = '<div class="empty-note">Belum ada unit untuk rute ' + escapeHtml(cur.name) + '. Tambahkan lewat form di atas.</div>';
-    } else {
-      cur.masterUnits.forEach(u => {
-        const row = document.createElement('div');
-        row.className = 'unit-row' + (u.active ? '' : ' inactive');
-        row.innerHTML =
-          '<span class="num">' + escapeHtml(u.number) + '</span>' +
-          '<div class="unit-row-actions">' +
-            '<button class="del-btn" data-id="' + u.id + '">Hapus</button>' +
-            '<div class="switch' + (u.active ? ' on' : '') + '" data-id="' + u.id + '"><div class="knob"></div></div>' +
-          '</div>';
-        unitListContainer.appendChild(row);
-      });
+
+    // Update filter counts and active states
+    const totalUnits = cur.masterUnits.length;
+    const totalActive = cur.masterUnits.filter(u => u.active).length;
+    const totalInactive = totalUnits - totalActive;
+
+    if (filterUnitsAll){
+      filterUnitsAll.textContent = 'Semua (' + totalUnits + ')';
+      filterUnitsAll.classList.toggle('active', unitFilter === 'all');
+    }
+    if (filterUnitsActive){
+      filterUnitsActive.textContent = 'Aktif (' + totalActive + ')';
+      filterUnitsActive.classList.toggle('active', unitFilter === 'active');
+    }
+    if (filterUnitsInactive){
+      filterUnitsInactive.textContent = 'Nonaktif (' + totalInactive + ')';
+      filterUnitsInactive.classList.toggle('active', unitFilter === 'inactive');
     }
 
+    const filtered = getFilteredUnits(cur);
+
+    if (selectAllUnitsBtn){
+      const allSelected = filtered.length > 0 && filtered.every(u => selectedUnitIds.has(String(u.id)));
+      selectAllUnitsBtn.textContent = allSelected ? '\u2611 Batal Pilih' : '\u2610 Pilih Semua';
+    }
+
+    updateBulkBar();
+
+    if (!cur.masterUnits || cur.masterUnits.length === 0){
+      unitListContainer.innerHTML = '<div class="empty-note">Belum ada unit untuk rute ' + escapeHtml(cur.name) + '. Tambahkan lewat form di atas.</div>';
+      return;
+    }
+
+    if (filtered.length === 0){
+      unitListContainer.innerHTML = '<div class="empty-note">Tidak ada unit pada kategori filter ini.</div>';
+      return;
+    }
+
+    filtered.forEach(u => {
+      const uIdStr = String(u.id);
+      const isSelected = selectedUnitIds.has(uIdStr);
+      const row = document.createElement('div');
+      row.className = 'unit-row' + (u.active ? '' : ' inactive') + (isSelected ? ' selected' : '');
+      row.setAttribute('data-id', uIdStr);
+
+      row.innerHTML =
+        '<div class="unit-row-left">' +
+          '<input type="checkbox" class="unit-checkbox" data-id="' + uIdStr + '" ' + (isSelected ? 'checked' : '') + ' aria-label="Pilih unit ' + escapeHtml(u.number) + '">' +
+          '<span class="num">' + escapeHtml(u.number) + '</span>' +
+          '<span class="unit-status-tag ' + (u.active ? 'active' : 'inactive') + '">' + (u.active ? 'Aktif' : 'Off') + '</span>' +
+        '</div>' +
+        '<div class="unit-row-actions">' +
+          '<button type="button" class="del-btn" data-id="' + uIdStr + '" data-num="' + escapeHtml(u.number) + '">&#128465; Hapus</button>' +
+          '<div class="switch' + (u.active ? ' on' : '') + '" data-id="' + uIdStr + '" title="Klik untuk ' + (u.active ? 'menonaktifkan' : 'mengaktifkan') + ' unit"><div class="knob"></div></div>' +
+        '</div>';
+
+      unitListContainer.appendChild(row);
+    });
+
+    // Checkbox selection listener
+    unitListContainer.querySelectorAll('.unit-checkbox').forEach(cb => {
+      cb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = cb.getAttribute('data-id');
+        if (cb.checked){
+          selectedUnitIds.add(id);
+        } else {
+          selectedUnitIds.delete(id);
+        }
+        const row = cb.closest('.unit-row');
+        if (row) row.classList.toggle('selected', cb.checked);
+        updateBulkBar();
+        if (selectAllUnitsBtn){
+          const allSelected = filtered.length > 0 && filtered.every(u => selectedUnitIds.has(String(u.id)));
+          selectAllUnitsBtn.textContent = allSelected ? '\u2611 Batal Pilih' : '\u2610 Pilih Semua';
+        }
+      });
+    });
+
+    // Row click to toggle selection
+    unitListContainer.querySelectorAll('.unit-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.del-btn') || e.target.closest('.switch') || e.target.closest('.unit-checkbox')) return;
+        const id = row.getAttribute('data-id');
+        const cb = row.querySelector('.unit-checkbox');
+        if (selectedUnitIds.has(id)){
+          selectedUnitIds.delete(id);
+          if (cb) cb.checked = false;
+          row.classList.remove('selected');
+        } else {
+          selectedUnitIds.add(id);
+          if (cb) cb.checked = true;
+          row.classList.add('selected');
+        }
+        updateBulkBar();
+        if (selectAllUnitsBtn){
+          const allSelected = filtered.length > 0 && filtered.every(u => selectedUnitIds.has(String(u.id)));
+          selectAllUnitsBtn.textContent = allSelected ? '\u2611 Batal Pilih' : '\u2610 Pilih Semua';
+        }
+      });
+    });
+
+    // Switch individual active toggle
     unitListContainer.querySelectorAll('.switch').forEach(sw => {
-      sw.addEventListener('click', () => {
+      sw.addEventListener('click', (e) => {
+        e.stopPropagation();
         const id = sw.getAttribute('data-id');
         const c = getActiveRoute();
-        const unit = c.masterUnits.find(u => u.id === id);
+        const unit = c.masterUnits.find(u => String(u.id) === String(id));
         if (!unit) return;
         unit.active = !unit.active;
         if (unit.active){
-          if (!c.departureOrder.includes(id)) c.departureOrder.push(id);
+          if (!c.departureOrder.some(x => String(x) === String(id))) c.departureOrder.push(unit.id);
         } else {
-          c.departureOrder = c.departureOrder.filter(x => x !== id);
+          c.departureOrder = c.departureOrder.filter(x => String(x) !== String(id));
         }
         saveState();
         renderUnitList();
@@ -731,20 +851,151 @@
       });
     });
 
+    // Single delete button listener with guaranteed ID matching & confirmation
     unitListContainer.querySelectorAll('.del-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const id = btn.getAttribute('data-id');
-        const c = getActiveRoute();
-        c.masterUnits = c.masterUnits.filter(u => u.id !== id);
-        c.departureOrder = c.departureOrder.filter(x => x !== id);
-        saveState();
-        renderUnitList();
-        updateActiveSummary();
-        markDirtyIfCommitted(c);
-        renderRouteBar();
+        const num = btn.getAttribute('data-num') || '';
+        deleteSingleUnit(id, num);
       });
     });
   }
+
+  function deleteSingleUnit(id, number){
+    const c = getActiveRoute();
+    const doDelete = () => {
+      c.masterUnits = c.masterUnits.filter(u => String(u.id) !== String(id));
+      c.departureOrder = c.departureOrder.filter(x => String(x) !== String(id));
+      selectedUnitIds.delete(String(id));
+      saveState();
+      renderUnitList();
+      updateActiveSummary();
+      markDirtyIfCommitted(c);
+      renderRouteBar();
+      showToast('Unit ' + number + ' berhasil dihapus');
+    };
+
+    if (typeof Swal === 'undefined'){
+      if (window.confirm('Hapus unit ' + number + ' dari rute ' + c.name + '?')) doDelete();
+      return;
+    }
+
+    Swal.fire({
+      title: 'Hapus Unit ' + escapeHtml(number) + '?',
+      text: 'Unit akan dihapus dari daftar armada rute ' + c.name + '.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Hapus',
+      cancelButtonText: 'Batal',
+      background: '#1D222A',
+      color: '#ECEAE4',
+      confirmButtonColor: '#FF6B5E',
+      cancelButtonColor: '#333A46'
+    }).then(res => {
+      if (res.isConfirmed) doDelete();
+    });
+  }
+
+  // Bulk Actions Handlers
+  function bulkActivateUnits(){
+    if (selectedUnitIds.size === 0) return;
+    const c = getActiveRoute();
+    let count = 0;
+    c.masterUnits.forEach(u => {
+      if (selectedUnitIds.has(String(u.id))){
+        u.active = true;
+        if (!c.departureOrder.some(x => String(x) === String(u.id))) c.departureOrder.push(u.id);
+        count++;
+      }
+    });
+    selectedUnitIds.clear();
+    saveState();
+    renderUnitList();
+    updateActiveSummary();
+    markDirtyIfCommitted(c);
+    renderRouteBar();
+    showToast(count + ' unit diaktifkan');
+  }
+
+  function bulkDeactivateUnits(){
+    if (selectedUnitIds.size === 0) return;
+    const c = getActiveRoute();
+    let count = 0;
+    c.masterUnits.forEach(u => {
+      if (selectedUnitIds.has(String(u.id))){
+        u.active = false;
+        c.departureOrder = c.departureOrder.filter(x => String(x) !== String(u.id));
+        count++;
+      }
+    });
+    selectedUnitIds.clear();
+    saveState();
+    renderUnitList();
+    updateActiveSummary();
+    markDirtyIfCommitted(c);
+    renderRouteBar();
+    showToast(count + ' unit dinonaktifkan');
+  }
+
+  function bulkDeleteUnits(){
+    if (selectedUnitIds.size === 0) return;
+    const c = getActiveRoute();
+    const count = selectedUnitIds.size;
+
+    const doBulkDelete = () => {
+      c.masterUnits = c.masterUnits.filter(u => !selectedUnitIds.has(String(u.id)));
+      c.departureOrder = c.departureOrder.filter(x => !selectedUnitIds.has(String(x)));
+      selectedUnitIds.clear();
+      saveState();
+      renderUnitList();
+      updateActiveSummary();
+      markDirtyIfCommitted(c);
+      renderRouteBar();
+      showToast(count + ' unit berhasil dihapus');
+    };
+
+    if (typeof Swal === 'undefined'){
+      if (window.confirm('Hapus ' + count + ' unit terpilih dari rute ' + c.name + '?')) doBulkDelete();
+      return;
+    }
+
+    Swal.fire({
+      title: 'Hapus ' + count + ' Unit?',
+      text: count + ' unit yang dipilih akan dihapus permanen dari rute ' + c.name + '.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Hapus Semua (' + count + ')',
+      cancelButtonText: 'Batal',
+      background: '#1D222A',
+      color: '#ECEAE4',
+      confirmButtonColor: '#FF6B5E',
+      cancelButtonColor: '#333A46'
+    }).then(res => {
+      if (res.isConfirmed) doBulkDelete();
+    });
+  }
+
+  if (bulkActivateBtn) bulkActivateBtn.addEventListener('click', bulkActivateUnits);
+  if (bulkDeactivateBtn) bulkDeactivateBtn.addEventListener('click', bulkDeactivateUnits);
+  if (bulkDeleteBtn) bulkDeleteBtn.addEventListener('click', bulkDeleteUnits);
+  if (bulkCancelBtn) bulkCancelBtn.addEventListener('click', () => { selectedUnitIds.clear(); renderUnitList(); });
+
+  if (selectAllUnitsBtn) selectAllUnitsBtn.addEventListener('click', () => {
+    const cur = getActiveRoute();
+    const filtered = getFilteredUnits(cur);
+    const allSelected = filtered.length > 0 && filtered.every(u => selectedUnitIds.has(String(u.id)));
+    if (allSelected){
+      filtered.forEach(u => selectedUnitIds.delete(String(u.id)));
+    } else {
+      filtered.forEach(u => selectedUnitIds.add(String(u.id)));
+    }
+    renderUnitList();
+  });
+
+  if (filterUnitsAll) filterUnitsAll.addEventListener('click', () => { unitFilter = 'all'; renderUnitList(); });
+  if (filterUnitsActive) filterUnitsActive.addEventListener('click', () => { unitFilter = 'active'; renderUnitList(); });
+  if (filterUnitsInactive) filterUnitsInactive.addEventListener('click', () => { unitFilter = 'inactive'; renderUnitList(); });
 
   function updateActiveSummary(){
     const cur = getActiveRoute();

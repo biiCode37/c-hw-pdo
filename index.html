@@ -188,13 +188,41 @@
   .add-unit-row input{flex:1;}
   .add-unit-row button{padding:0 18px; border:none; border-radius:9px; background:var(--amber); color:#1A1300;
     font-weight:700; font-family:'Space Mono', monospace; font-size:13px; cursor:pointer;}
+  
+  /* Unit Toolbar & Bulk Actions */
+  .unit-toolbar{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:14px; margin-bottom:12px; flex-wrap:wrap;}
+  .unit-filter-pills{display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:2px;}
+  .uf-pill{padding:5px 9px; border-radius:6px; border:none; background:transparent; color:var(--text-muted); font-size:11px; font-family:'Space Mono', monospace; font-weight:700; cursor:pointer; transition:all .15s ease;}
+  .uf-pill.active{background:var(--amber); color:#1A1300;}
+  .unit-select-all-btn{padding:5px 10px; border-radius:7px; border:1px solid var(--line); background:var(--surface-2); color:var(--text); font-size:11px; font-family:'Space Mono', monospace; font-weight:700; cursor:pointer;}
+  .unit-select-all-btn:hover{border-color:var(--amber); color:var(--amber);}
+
+  .bulk-units-bar{position:sticky; top:10px; z-index:100; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; border-radius:12px; background:#1D222A; border:1px solid var(--amber); box-shadow:0 6px 20px rgba(0,0,0,0.5), 0 0 16px rgba(255,176,32,0.2); margin-bottom:14px; animation:alarmPop .2s ease;}
+  .bub-count{font-family:'Space Mono', monospace; font-weight:700; font-size:12px; color:var(--amber); display:flex; align-items:center; gap:6px;}
+  .bub-actions{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .bub-btn{padding:6px 10px; border-radius:7px; border:none; font-family:'Space Mono', monospace; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px; transition:transform .1s ease;}
+  .bub-btn:active{transform:scale(0.96);}
+  .bub-btn.activate{background:rgba(80,227,194,0.18); color:#50E3C2; border:1px solid #50E3C2;}
+  .bub-btn.deactivate{background:rgba(255,176,32,0.15); color:var(--amber); border:1px solid var(--amber);}
+  .bub-btn.danger{background:rgba(255,107,94,0.18); color:var(--danger); border:1px solid var(--danger);}
+  .bub-btn.cancel{background:transparent; color:var(--text-muted); border:1px solid var(--line); padding:6px 8px;}
+
   .unit-list{border:1px solid var(--line); border-radius:14px; overflow:hidden;}
-  .unit-row{display:flex; align-items:center; justify-content:space-between; padding:13px 14px; background:var(--surface); border-top:1px solid var(--line);}
+  .unit-row{display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:var(--surface); border-top:1px solid var(--line); transition:background .15s ease;}
   .unit-row:first-child{border-top:none;}
+  .unit-row.selected{background:rgba(255,176,32,0.08);}
+  .unit-row-left{display:flex; align-items:center; gap:10px;}
+  .unit-checkbox{width:18px; height:18px; accent-color:var(--amber); cursor:pointer;}
   .unit-row .num{font-family:'Space Mono', monospace; font-size:15px; font-weight:700;}
   .unit-row.inactive .num{color:var(--text-muted); text-decoration:line-through;}
-  .unit-row-actions{display:flex; align-items:center; gap:14px;}
-  .del-btn{background:none; border:none; color:var(--danger); font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter'; padding:4px;}
+  .unit-status-tag{font-size:10px; font-family:'Space Mono', monospace; font-weight:700; padding:1px 5px; border-radius:4px; text-transform:uppercase;}
+  .unit-status-tag.active{background:rgba(80,227,194,0.15); color:#50E3C2;}
+  .unit-status-tag.inactive{background:rgba(255,255,255,0.07); color:var(--text-muted);}
+
+  .unit-row-actions{display:flex; align-items:center; gap:10px;}
+  .del-btn{display:inline-flex; align-items:center; gap:4px; background:rgba(255,107,94,0.08); border:1px solid rgba(255,107,94,0.3); border-radius:6px; color:var(--danger); font-size:11.5px; font-weight:600; cursor:pointer; font-family:'Inter', sans-serif; padding:5px 9px; transition:all .15s ease;}
+  .del-btn:hover{background:var(--danger); color:#FFF; border-color:var(--danger);}
+  .del-btn:active{transform:scale(0.95);}
   .switch{width:44px; height:25px; border-radius:999px; background:var(--surface-2); position:relative; cursor:pointer;
     border:1px solid var(--line); transition:background .15s; flex-shrink:0;}
   .switch.on{background:var(--amber); border-color:var(--amber);}
@@ -607,6 +635,27 @@
         <button type="button" id="addUnitBtn">Tambah</button>
       </div>
       <p class="hint" style="margin-top:-8px;">Unit ditambahkan ke rute yang sedang aktif saat ini. Urutan keberangkatan diatur di tab "Urutan".</p>
+      
+      <!-- Toolbar filter & select-all -->
+      <div class="unit-toolbar">
+        <div class="unit-filter-pills">
+          <button type="button" class="uf-pill active" id="filterUnitsAll">Semua</button>
+          <button type="button" class="uf-pill" id="filterUnitsActive">Aktif</button>
+          <button type="button" class="uf-pill" id="filterUnitsInactive">Nonaktif</button>
+        </div>
+        <button type="button" class="unit-select-all-btn" id="selectAllUnitsBtn">&#9745; Pilih Semua</button>
+      </div>
+
+      <!-- Bulk Actions Bar (Sticky & Muncul saat unit dipilih) -->
+      <div class="bulk-units-bar" id="bulkUnitsBar" style="display:none;">
+        <span class="bub-count" id="bulkCountText">0 unit dipilih</span>
+        <div class="bub-actions">
+          <button type="button" class="bub-btn activate" id="bulkActivateBtn">&#10003; Aktifkan</button>
+          <button type="button" class="bub-btn deactivate" id="bulkDeactivateBtn">&#8856; Nonaktifkan</button>
+          <button type="button" class="bub-btn danger" id="bulkDeleteBtn">&#128465; Hapus</button>
+          <button type="button" class="bub-btn cancel" id="bulkCancelBtn" title="Batal Pilih">&#10005;</button>
+        </div>
+      </div>
     </div>
     <div class="unit-list" id="unitListContainer"></div>
   </div>
