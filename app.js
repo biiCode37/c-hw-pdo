@@ -10,15 +10,52 @@
 
   function createRouteObject(id, name, overrides = {}){
     const unitsSource = overrides.masterUnits || (name === 'JAK.88' ? DEFAULT_UNITS_JAK88 : DEFAULT_UNITS_JAK115);
+    const seenIds = new Set();
     const masterUnits = unitsSource.map((n, i) => {
-      if (typeof n === 'object' && n !== null && n.number !== undefined){
-        return { id: n.id || ('u_' + i + '_' + Date.now()), number: String(n.number), active: n.active !== false };
+      let num = '';
+      let active = true;
+      let existingId = null;
+
+      if (typeof n === 'object' && n !== null){
+        num = String(n.number !== undefined ? n.number : (n.num !== undefined ? n.num : i + 1));
+        active = n.active !== false;
+        if (n.id && String(n.id).trim() && String(n.id) !== 'undefined' && String(n.id) !== 'null'){
+          existingId = String(n.id).trim();
+        }
+      } else {
+        num = String(n);
+        active = true;
       }
-      return { id: 'u_' + i + '_' + Date.now() + Math.random().toString(36).slice(2, 6), number: String(n), active: true };
+
+      // Ensure every unit has a non-empty, strictly unique ID
+      let finalId = existingId;
+      if (!finalId || seenIds.has(finalId)){
+        finalId = 'u_' + num.replace(/[^a-zA-Z0-9]/g, '_') + '_' + i + '_' + Math.random().toString(36).slice(2, 7);
+      }
+      seenIds.add(finalId);
+
+      return { id: finalId, number: num, active };
+    });
+
+    const cleanOverrides = Object.assign({}, overrides);
+    delete cleanOverrides.masterUnits;
+    delete cleanOverrides.departureOrder;
+
+    let departureOrder = [];
+    if (Array.isArray(overrides.departureOrder) && overrides.departureOrder.length > 0){
+      departureOrder = overrides.departureOrder.map(ord => {
+        const found = masterUnits.find(u => String(u.id) === String(ord) || String(u.number) === String(ord));
+        return found ? found.id : null;
+      }).filter(Boolean);
+    }
+    masterUnits.forEach(u => {
+      if (u.active && !departureOrder.includes(u.id)){
+        departureOrder.push(u.id);
+      }
     });
 
     const route = Object.assign({
-      id: id || ('route_' + Date.now() + Math.random().toString(36).slice(2, 6)),
+      id: id || ('route_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
       name: name || 'Rute Baru',
       color: overrides.color || ROUTE_PALETTE[0],
       jamMulai: '05:00',
@@ -34,17 +71,15 @@
       peak2Interval: 3,
       alarmEnabled: true,
       alarmDuration: 8,
-      masterUnits: masterUnits,
-      departureOrder: masterUnits.filter(u => u.active).map(u => u.id),
       committedSchedule: null,
       scheduleDirty: false,
       lastShift: '1 (Pagi)',
       lastRitaseFrom: 1
-    }, overrides);
+    }, cleanOverrides, {
+      masterUnits: masterUnits,
+      departureOrder: departureOrder
+    });
 
-    if (!Array.isArray(route.departureOrder) || route.departureOrder.length === 0){
-      route.departureOrder = route.masterUnits.filter(u => u.active).map(u => u.id);
-    }
     return route;
   }
 
@@ -771,16 +806,17 @@
       const row = document.createElement('div');
       row.className = 'unit-row' + (u.active ? '' : ' inactive') + (isSelected ? ' selected' : '');
       row.setAttribute('data-id', uIdStr);
+      row.setAttribute('data-num', String(u.number));
 
       row.innerHTML =
         '<div class="unit-row-left">' +
-          '<input type="checkbox" class="unit-checkbox" data-id="' + uIdStr + '" ' + (isSelected ? 'checked' : '') + ' aria-label="Pilih unit ' + escapeHtml(u.number) + '">' +
-          '<span class="num">' + escapeHtml(u.number) + '</span>' +
+          '<input type="checkbox" class="unit-checkbox" data-id="' + escapeHtml(uIdStr) + '" data-num="' + escapeHtml(String(u.number)) + '" ' + (isSelected ? 'checked' : '') + ' aria-label="Pilih unit ' + escapeHtml(String(u.number)) + '">' +
+          '<span class="num">' + escapeHtml(String(u.number)) + '</span>' +
           '<span class="unit-status-tag ' + (u.active ? 'active' : 'inactive') + '">' + (u.active ? 'Aktif' : 'Off') + '</span>' +
         '</div>' +
         '<div class="unit-row-actions">' +
-          '<button type="button" class="del-btn" data-id="' + uIdStr + '" data-num="' + escapeHtml(u.number) + '">&#128465; Hapus</button>' +
-          '<div class="switch' + (u.active ? ' on' : '') + '" data-id="' + uIdStr + '" title="Klik untuk ' + (u.active ? 'menonaktifkan' : 'mengaktifkan') + ' unit"><div class="knob"></div></div>' +
+          '<button type="button" class="del-btn" data-id="' + escapeHtml(uIdStr) + '" data-num="' + escapeHtml(String(u.number)) + '">&#128465; Hapus</button>' +
+          '<div class="switch' + (u.active ? ' on' : '') + '" data-id="' + escapeHtml(uIdStr) + '" data-num="' + escapeHtml(String(u.number)) + '" title="Klik untuk ' + (u.active ? 'menonaktifkan' : 'mengaktifkan') + ' unit ' + escapeHtml(String(u.number)) + '"><div class="knob"></div></div>' +
         '</div>';
 
       unitListContainer.appendChild(row);
@@ -829,19 +865,23 @@
       });
     });
 
-    // Switch individual active toggle
+    // Switch individual active toggle with robust dual lookup
     unitListContainer.querySelectorAll('.switch').forEach(sw => {
       sw.addEventListener('click', (e) => {
         e.stopPropagation();
+        e.preventDefault();
         const id = sw.getAttribute('data-id');
+        const num = sw.getAttribute('data-num');
         const c = getActiveRoute();
-        const unit = c.masterUnits.find(u => String(u.id) === String(id));
+        const unit = c.masterUnits.find(u => (id && String(u.id) === String(id)) || (num && String(u.number) === String(num)));
         if (!unit) return;
         unit.active = !unit.active;
         if (unit.active){
-          if (!c.departureOrder.some(x => String(x) === String(id))) c.departureOrder.push(unit.id);
+          if (!c.departureOrder.some(x => String(x) === String(unit.id) || String(x) === String(unit.number))){
+            c.departureOrder.push(unit.id);
+          }
         } else {
-          c.departureOrder = c.departureOrder.filter(x => String(x) !== String(id));
+          c.departureOrder = c.departureOrder.filter(x => String(x) !== String(unit.id) && String(x) !== String(unit.number));
         }
         saveState();
         renderUnitList();
@@ -855,6 +895,7 @@
     unitListContainer.querySelectorAll('.del-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        e.preventDefault();
         const id = btn.getAttribute('data-id');
         const num = btn.getAttribute('data-num') || '';
         deleteSingleUnit(id, num);
@@ -865,9 +906,9 @@
   function deleteSingleUnit(id, number){
     const c = getActiveRoute();
     const doDelete = () => {
-      c.masterUnits = c.masterUnits.filter(u => String(u.id) !== String(id));
-      c.departureOrder = c.departureOrder.filter(x => String(x) !== String(id));
-      selectedUnitIds.delete(String(id));
+      c.masterUnits = c.masterUnits.filter(u => !( (id && String(u.id) === String(id)) || (number && String(u.number) === String(number)) ));
+      c.departureOrder = c.departureOrder.filter(x => !( (id && String(x) === String(id)) || (number && String(x) === String(number)) ));
+      if (id) selectedUnitIds.delete(String(id));
       saveState();
       renderUnitList();
       updateActiveSummary();
@@ -1010,8 +1051,8 @@
     const val = input.value.trim();
     if (!val) return;
     const cur = getActiveRoute();
-    if (cur.masterUnits.some(u => u.number === val)){ showToast('Nomor unit sudah ada di rute ini', 'error'); return; }
-    const id = 'u_' + Date.now();
+    if (cur.masterUnits.some(u => String(u.number).trim() === val)){ showToast('Nomor unit sudah ada di rute ini', 'error'); return; }
+    const id = 'u_' + val.replace(/[^a-zA-Z0-9]/g, '_') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     cur.masterUnits.push({ id, number: val, active: true });
     cur.departureOrder.push(id);
     saveState();
