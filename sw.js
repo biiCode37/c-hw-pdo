@@ -1,10 +1,11 @@
 // Service Worker — Jadwal Keberangkatan
 // Tujuan: (1) memenuhi syarat wajib PWA agar app bisa di-"Install"/"Add to Home Screen" di HP,
 // (2) menyimpan app-shell di cache supaya app tetap bisa dibuka meski koneksi internet putus.
-const CACHE_NAME = 'jadwal-berangkat-v3';
+const CACHE_NAME = 'jadwal-berangkat-v4';
 const APP_SHELL = [
   './',
   './index.html',
+  './app.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

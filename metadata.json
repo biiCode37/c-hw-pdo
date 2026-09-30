@@ -1,0 +1,8 @@
+{
+  "name": "Jadwal Keberangkatan",
+  "description": "Aplikasi manajemen jadwal keberangkatan armada bus otomatis & mode papan display untuk pos dispatch.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
