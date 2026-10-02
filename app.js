@@ -254,24 +254,45 @@
     $('dirtyBanner').classList.toggle('show', !!cur.scheduleDirty);
   }
 
-  // ===== TAB SWITCHING =====
-  const tabJadwalBtn = $('tabJadwalBtn'), tabUnitBtn = $('tabUnitBtn'), tabOrderBtn = $('tabOrderBtn');
-  const panelJadwal = $('panelJadwal'), panelUnit = $('panelUnit'), panelOrder = $('panelOrder');
+  // ===== TAB SWITCHING (MOBILE BOTTOM NAV & TOP TABS) =====
+  const tabJadwalBtn = $('tabJadwalBtn'), tabUnitBtn = $('tabUnitBtn'), tabOrderBtn = $('tabOrderBtn'), tabRouteBtn = $('tabRouteBtn');
+  const panelJadwal = $('panelJadwal'), panelUnit = $('panelUnit'), panelOrder = $('panelOrder'), panelRoute = $('panelRoute');
+  const bnavJadwal = $('bnavJadwal'), bnavUnit = $('bnavUnit'), bnavOrder = $('bnavOrder'), bnavRoute = $('bnavRoute');
+
   function switchTab(tab){
-    tabJadwalBtn.classList.toggle('active', tab==='jadwal');
-    tabUnitBtn.classList.toggle('active', tab==='unit');
-    tabOrderBtn.classList.toggle('active', tab==='order');
-    panelJadwal.classList.toggle('active', tab==='jadwal');
-    panelUnit.classList.toggle('active', tab==='unit');
-    panelOrder.classList.toggle('active', tab==='order');
+    if (tabJadwalBtn) tabJadwalBtn.classList.toggle('active', tab==='jadwal');
+    if (tabUnitBtn) tabUnitBtn.classList.toggle('active', tab==='unit');
+    if (tabOrderBtn) tabOrderBtn.classList.toggle('active', tab==='order');
+    if (tabRouteBtn) tabRouteBtn.classList.toggle('active', tab==='route');
+
+    if (bnavJadwal) bnavJadwal.classList.toggle('active', tab==='jadwal');
+    if (bnavUnit) bnavUnit.classList.toggle('active', tab==='unit');
+    if (bnavOrder) bnavOrder.classList.toggle('active', tab==='order');
+    if (bnavRoute) bnavRoute.classList.toggle('active', tab==='route');
+
+    if (panelJadwal) panelJadwal.classList.toggle('active', tab==='jadwal');
+    if (panelUnit) panelUnit.classList.toggle('active', tab==='unit');
+    if (panelOrder) panelOrder.classList.toggle('active', tab==='order');
+    if (panelRoute) panelRoute.classList.toggle('active', tab==='route');
+
     if (tab==='order') renderOrderList();
-    if (tab==='unit') renderRouteList();
+    if (tab==='unit') renderUnitList();
+    if (tab==='route') renderRouteList();
     window.scrollTo({top:0, behavior:'instant'});
   }
-  tabJadwalBtn.addEventListener('click', () => switchTab('jadwal'));
-  tabUnitBtn.addEventListener('click', () => switchTab('unit'));
-  tabOrderBtn.addEventListener('click', () => switchTab('order'));
-  $('goToUnitTab').addEventListener('click', () => switchTab('unit'));
+
+  if (tabJadwalBtn) tabJadwalBtn.addEventListener('click', () => switchTab('jadwal'));
+  if (tabUnitBtn) tabUnitBtn.addEventListener('click', () => switchTab('unit'));
+  if (tabOrderBtn) tabOrderBtn.addEventListener('click', () => switchTab('order'));
+  if (tabRouteBtn) tabRouteBtn.addEventListener('click', () => switchTab('route'));
+
+  if (bnavJadwal) bnavJadwal.addEventListener('click', () => switchTab('jadwal'));
+  if (bnavUnit) bnavUnit.addEventListener('click', () => switchTab('unit'));
+  if (bnavOrder) bnavOrder.addEventListener('click', () => switchTab('order'));
+  if (bnavRoute) bnavRoute.addEventListener('click', () => switchTab('route'));
+
+  const goToUnitTabBtn = $('goToUnitTab');
+  if (goToUnitTabBtn) goToUnitTabBtn.addEventListener('click', () => switchTab('unit'));
 
   // ===== ROUTE NAVIGATION BAR & ACTIONS =====
   const routeTabsContainer = $('routeTabsContainer');
@@ -727,6 +748,7 @@
   // ===== DAFTAR UNIT & URUTAN =====
   const unitListContainer = $('unitListContainer');
   const activeSummaryText = $('activeSummaryText');
+  const unitSearchInput = $('unitSearchInput');
   const bulkUnitsBar = $('bulkUnitsBar');
   const bulkCountText = $('bulkCountText');
   const bulkActivateBtn = $('bulkActivateBtn');
@@ -740,12 +762,25 @@
 
   const selectedUnitIds = new Set();
   let unitFilter = 'all'; // 'all' | 'active' | 'inactive'
+  let unitSearchQuery = '';
 
   function getFilteredUnits(cur){
     if (!cur.masterUnits) return [];
-    if (unitFilter === 'active') return cur.masterUnits.filter(u => u.active);
-    if (unitFilter === 'inactive') return cur.masterUnits.filter(u => !u.active);
-    return cur.masterUnits;
+    let list = cur.masterUnits;
+    if (unitFilter === 'active') list = list.filter(u => u.active);
+    else if (unitFilter === 'inactive') list = list.filter(u => !u.active);
+    if (unitSearchQuery){
+      const q = unitSearchQuery.toLowerCase().trim();
+      list = list.filter(u => String(u.number).toLowerCase().includes(q));
+    }
+    return list;
+  }
+
+  if (unitSearchInput){
+    unitSearchInput.addEventListener('input', () => {
+      unitSearchQuery = unitSearchInput.value.trim();
+      renderUnitList();
+    });
   }
 
   function updateBulkBar(){
@@ -753,7 +788,7 @@
     const n = selectedUnitIds.size;
     if (n > 0){
       bulkUnitsBar.style.display = 'flex';
-      bulkCountText.textContent = n + ' unit dipilih';
+      bulkCountText.textContent = n + ' dipilih';
     } else {
       bulkUnitsBar.style.display = 'none';
     }
@@ -1041,7 +1076,17 @@
   function updateActiveSummary(){
     const cur = getActiveRoute();
     const active = cur.masterUnits.filter(u => u.active).length;
-    activeSummaryText.textContent = active + ' / ' + cur.masterUnits.length + ' unit aktif';
+    if (activeSummaryText) activeSummaryText.textContent = active + ' / ' + cur.masterUnits.length + ' unit aktif';
+    const bnavUnitBadge = $('bnavUnitBadge');
+    if (bnavUnitBadge) bnavUnitBadge.textContent = active;
+    const bnavRouteBadge = $('bnavRouteBadge');
+    if (bnavRouteBadge) bnavRouteBadge.textContent = state.routes.length;
+    const bnavJadwalDot = $('bnavJadwalDot');
+    if (bnavJadwalDot){
+      const hasSched = cur.committedSchedule && cur.committedSchedule.rows && cur.committedSchedule.rows.length;
+      bnavJadwalDot.classList.toggle('show', !!hasSched);
+      bnavJadwalDot.style.background = cur.scheduleDirty ? 'var(--amber)' : 'var(--emerald)';
+    }
   }
 
   $('addUnitBtn').addEventListener('click', addUnit);
@@ -1092,7 +1137,7 @@
 
     orderListContainer.innerHTML = '';
     if (cur.departureOrder.length === 0){
-      orderListContainer.innerHTML = '<div class="empty-note">Belum ada unit aktif di rute ' + escapeHtml(cur.name) + '. Aktifkan unit dulu di tab "Daftar Unit".</div>';
+      orderListContainer.innerHTML = '<div class="empty-note">Belum ada unit aktif di rute ' + escapeHtml(cur.name) + '. Aktifkan unit dulu di tab "Armada".</div>';
       return;
     }
 
@@ -1102,8 +1147,48 @@
       const row = document.createElement('div');
       row.className = 'order-row';
       row.setAttribute('data-id', id);
-      row.innerHTML = '<span class="handle">&#9776;</span><span class="idx">' + String(idx+1).padStart(2,'0') + '</span><span class="num">' + escapeHtml(u.number) + '</span>';
+      row.innerHTML =
+        '<span class="handle" title="Tahan dan geser">&#9776;</span>' +
+        '<span class="idx">' + String(idx+1).padStart(2,'0') + '</span>' +
+        '<span class="num">' + escapeHtml(u.number) + '</span>' +
+        '<div class="order-row-quick-btns">' +
+          '<button type="button" class="order-step-btn order-step-up" data-idx="' + idx + '" title="Pindah ke atas" ' + (idx === 0 ? 'disabled style="opacity:0.25; pointer-events:none;"' : '') + '>&uarr;</button>' +
+          '<button type="button" class="order-step-btn order-step-down" data-idx="' + idx + '" title="Pindah ke bawah" ' + (idx === cur.departureOrder.length - 1 ? 'disabled style="opacity:0.25; pointer-events:none;"' : '') + '>&darr;</button>' +
+        '</div>';
       orderListContainer.appendChild(row);
+    });
+
+    // Touch friendly step buttons
+    orderListContainer.querySelectorAll('.order-step-up').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const i = parseInt(btn.getAttribute('data-idx'), 10);
+        if (i > 0){
+          const c = getActiveRoute();
+          const temp = c.departureOrder[i];
+          c.departureOrder[i] = c.departureOrder[i-1];
+          c.departureOrder[i-1] = temp;
+          saveState();
+          markDirtyIfCommitted(c);
+          renderOrderList();
+        }
+      });
+    });
+
+    orderListContainer.querySelectorAll('.order-step-down').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const i = parseInt(btn.getAttribute('data-idx'), 10);
+        const c = getActiveRoute();
+        if (i < c.departureOrder.length - 1){
+          const temp = c.departureOrder[i];
+          c.departureOrder[i] = c.departureOrder[i+1];
+          c.departureOrder[i+1] = temp;
+          saveState();
+          markDirtyIfCommitted(c);
+          renderOrderList();
+        }
+      });
     });
 
     if (sortableInstance) sortableInstance.destroy();
@@ -1597,21 +1682,46 @@
     resultSection.scrollIntoView({behavior:'smooth', block:'start'});
   }
 
-  // Copy as Text
+  // Copy as Text (WhatsApp Optimized)
   $('copyBtn').addEventListener('click', () => {
     if (!lastSchedule) return;
     const cur = getActiveRoute();
-    let text = 'JADWAL KEBERANGKATAN RUTE ' + cur.name + ' (' + lastSchedule.startLabel + ' - ' + lastSchedule.endLabel + ')\n';
-    text += 'Total ' + lastSchedule.totalDep + ' keberangkatan, ' + lastSchedule.N + ' unit, ' + lastSchedule.R + ' ritase\n\n';
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    let text = '🚌 *JADWAL KEBERANGKATAN MIKROTRANS*\n';
+    text += '📍 *Rute:* ' + cur.name + '\n';
+    text += '📅 *Hari/Tanggal:* ' + dateFormatted + '\n';
+    text += '⏰ *Jam Operasional:* ' + lastSchedule.startLabel + ' - ' + lastSchedule.endLabel + ' (' + lastSchedule.R + ' Rit)\n';
+    text += '📊 *Total:* ' + lastSchedule.totalDep + ' Keberangkatan | ' + lastSchedule.N + ' Unit Aktif\n';
+    text += '━━━━━━━━━━━━━━━━━━━━\n';
     let curRitase = 0;
     lastSchedule.rows.forEach(r => {
-      if (r.ritase !== curRitase){ curRitase = r.ritase; text += '\n-- RITASE ' + curRitase + ' --\n'; }
-      text += r.no + '. Unit ' + r.unit + (r.isPeak ? ' [PEAK]' : '') + ' \u2014 ' + r.jam + '\n';
+      if (r.ritase !== curRitase){
+        curRitase = r.ritase;
+        text += '\n🔹 *RITASE ' + curRitase + '*\n';
+      }
+      const peakTag = r.isPeak ? ' ⚡[PEAK]' : '';
+      const gapText = r.interval !== null ? ' (+' + r.interval + 'm)' : '';
+      text += String(r.no).padStart(2, '0') + '. Unit *' + r.unit + '* ➔ ' + r.jam + gapText + peakTag + '\n';
     });
+    text += '\n━━━━━━━━━━━━━━━━━━━━\n';
+    text += '_Dipantau via Dispatcher Mikrotrans_';
+
     const btn = $('copyBtn');
-    const doneMsg = () => { btn.textContent='Tersalin \u2713'; btn.classList.add('copied'); setTimeout(()=>{ btn.textContent='Salin sebagai teks'; btn.classList.remove('copied'); },1600); };
-    if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(doneMsg).catch(()=>fallbackCopy(text,doneMsg)); }
-    else { fallbackCopy(text, doneMsg); }
+    const doneMsg = () => {
+      btn.innerHTML = '<span>Tersalin ke WA ✓</span>';
+      btn.classList.add('copied');
+      showToast('Jadwal tersalin, siap ditempel ke grup WhatsApp');
+      setTimeout(()=>{
+        btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Salin Teks (WA)</span>';
+        btn.classList.remove('copied');
+      }, 2000);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(doneMsg).catch(()=>fallbackCopy(text,doneMsg));
+    } else {
+      fallbackCopy(text, doneMsg);
+    }
   });
   function fallbackCopy(text, cb){
     const ta = document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
