@@ -74,7 +74,8 @@
       committedSchedule: null,
       scheduleDirty: false,
       lastShift: '1 (Pagi)',
-      lastRitaseFrom: 1
+      lastRitaseFrom: 1,
+      activeInSchedule: cleanOverrides.activeInSchedule !== undefined ? !!cleanOverrides.activeInSchedule : true
     }, cleanOverrides, {
       masterUnits: masterUnits,
       departureOrder: departureOrder
@@ -202,9 +203,13 @@
       state.routes = def.routes;
       state.activeRouteId = def.activeRouteId;
     }
-    let cur = state.routes.find(r => r.id === state.activeRouteId);
+    let cur = state.routes.find(r => r.id === state.activeRouteId && r.activeInSchedule !== false);
     if (!cur){
-      cur = state.routes[0];
+      cur = state.routes.find(r => r.activeInSchedule !== false);
+      if (!cur){
+        state.routes[0].activeInSchedule = true;
+        cur = state.routes[0];
+      }
       state.activeRouteId = cur.id;
     }
     return cur;
@@ -364,11 +369,111 @@
   const delRouteBtn = $('delRouteBtn');
   const unitCardTitle = $('unitCardTitle');
 
+  function removeRouteFromSchedule(routeId){
+    const schedRoutes = state.routes.filter(r => r.activeInSchedule !== false);
+    if (schedRoutes.length <= 1){
+      showToast('Minimal 1 rute harus tetap tampil di jadwal. Silakan tambah/aktifkan rute lain terlebih dahulu.', 'error');
+      return;
+    }
+    const target = state.routes.find(r => r.id === routeId);
+    if (!target) return;
+    target.activeInSchedule = false;
+    saveState();
+
+    if (state.activeRouteId === routeId){
+      const remaining = state.routes.find(r => r.activeInSchedule !== false);
+      if (remaining){
+        switchActiveRoute(remaining.id);
+      }
+    } else {
+      renderRouteBar();
+    }
+    showToast('Rute "' + target.name + '" dikeluarkan dari jadwal (tetap tersimpan di tab Rute)');
+  }
+
+  function openScheduleRoutePicker(){
+    const hiddenRoutes = state.routes.filter(r => r.activeInSchedule === false);
+    if (hiddenRoutes.length === 0){
+      promptAddNewRoute();
+      return;
+    }
+
+    let html = '<div style="text-align:left; font-size:13px; color:#ECEAE4;">';
+    html += '<p style="margin-bottom:12px; color:#8E9AA8; font-size:12px;">Pilih rute tersimpan untuk ditampilkan kembali di jadwal keberangkatan:</p>';
+    html += '<div style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; margin-bottom:14px;">';
+
+    hiddenRoutes.forEach(r => {
+      const uCount = r.masterUnits.filter(u => u.active).length;
+      html += '<div style="display:flex; align-items:center; justify-content:space-between; background:#14171C; padding:9px 12px; border-radius:8px; border:1px solid #282E38;">' +
+        '<div style="display:flex; align-items:center; gap:8px;">' +
+          '<span style="width:10px; height:10px; border-radius:50%; background:' + (r.color || '#FFB020') + ';"></span>' +
+          '<div>' +
+            '<div style="font-weight:700; font-family:\'Space Mono\', monospace; font-size:13px;">' + escapeHtml(r.name) + '</div>' +
+            '<div style="font-size:11px; color:#8E9AA8;">' + r.jamMulai + '-' + r.jamSelesai + ' &middot; ' + r.ritase + ' Rit &middot; ' + uCount + ' unit</div>' +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="btn-picker-add" data-id="' + r.id + '" style="padding:6px 12px; border-radius:6px; background:#FFB020; color:#14171C; font-weight:700; font-size:11.5px; border:none; cursor:pointer;">+ Tampilkan</button>' +
+      '</div>';
+    });
+    html += '</div>';
+
+    html += '<div style="display:flex; gap:8px; border-top:1px solid #282E38; padding-top:12px;">' +
+      '<button type="button" id="pickerShowAllBtn" style="flex:1; padding:9px 8px; border-radius:7px; background:#222832; border:1px solid #333A46; color:#ECEAE4; font-size:12px; font-weight:600; cursor:pointer;">&#127760; Tampilkan Semua</button>' +
+      '<button type="button" id="pickerCreateNewBtn" style="flex:1; padding:9px 8px; border-radius:7px; background:#FFB020; border:none; color:#14171C; font-size:12px; font-weight:700; cursor:pointer;">+ Rute Baru</button>' +
+    '</div>';
+    html += '</div>';
+
+    Swal.fire({
+      title: 'Kelola Rute di Jadwal',
+      html: html,
+      showConfirmButton: false,
+      showCloseButton: true,
+      background: '#1D222A',
+      color: '#ECEAE4',
+      didOpen: () => {
+        const modal = Swal.getPopup();
+        modal.querySelectorAll('.btn-picker-add').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const target = state.routes.find(r => r.id === id);
+            if (target){
+              target.activeInSchedule = true;
+              saveState();
+              switchActiveRoute(target.id);
+              Swal.close();
+              showToast('Rute "' + target.name + '" ditampilkan di jadwal');
+            }
+          });
+        });
+        const showAllBtn = modal.querySelector('#pickerShowAllBtn');
+        if (showAllBtn){
+          showAllBtn.addEventListener('click', () => {
+            state.routes.forEach(r => { r.activeInSchedule = true; });
+            saveState();
+            renderRouteBar();
+            Swal.close();
+            showToast('Semua rute sekarang aktif di jadwal (Multi-Rute Terminal)');
+          });
+        }
+        const createNewBtn = modal.querySelector('#pickerCreateNewBtn');
+        if (createNewBtn){
+          createNewBtn.addEventListener('click', () => {
+            Swal.close();
+            promptAddNewRoute();
+          });
+        }
+      }
+    });
+  }
+
   function renderRouteBar(){
     const cur = getActiveRoute();
     routeTabsContainer.innerHTML = '';
 
-    state.routes.forEach(r => {
+    const schedRoutes = state.routes.filter(r => r.activeInSchedule !== false);
+    const hiddenRoutes = state.routes.filter(r => r.activeInSchedule === false);
+
+    schedRoutes.forEach(r => {
       const activeCount = r.masterUnits.filter(u => u.active).length;
       const pill = document.createElement('div');
       pill.className = 'route-tab-pill' + (r.id === cur.id ? ' active' : '');
@@ -379,17 +484,32 @@
         statusClass = r.scheduleDirty ? 'dirty' : 'ready';
       }
 
+      const closeBtnHtml = schedRoutes.length > 1
+        ? '<button type="button" class="rtp-close" data-id="' + r.id + '" data-tooltip="Keluarkan rute ' + escapeHtml(r.name) + ' dari jadwal" aria-label="Keluarkan rute">&times;</button>'
+        : '';
+
       pill.innerHTML =
         '<span class="rtp-color" style="background:' + (r.color || '#FFB020') + '"></span>' +
         '<span class="rtp-name">' + escapeHtml(r.name) + '</span>' +
         '<span class="rtp-badge">' + activeCount + 'u &middot; ' + r.ritase + 'r</span>' +
-        '<span class="rtp-status ' + statusClass + '" title="' + (statusClass === 'ready' ? 'Jadwal Siap' : (statusClass === 'dirty' ? 'Perlu Dihitung Ulang' : 'Belum Ada Jadwal')) + '"></span>';
+        '<span class="rtp-status ' + statusClass + '" title="' + (statusClass === 'ready' ? 'Jadwal Siap' : (statusClass === 'dirty' ? 'Perlu Dihitung Ulang' : 'Belum Ada Jadwal')) + '"></span>' +
+        closeBtnHtml;
 
-      pill.addEventListener('click', () => {
+      pill.addEventListener('click', (e) => {
+        if (e.target.closest('.rtp-close')) return;
         if (state.activeRouteId !== r.id){
           switchActiveRoute(r.id);
         }
       });
+
+      const closeBtn = pill.querySelector('.rtp-close');
+      if (closeBtn){
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeRouteFromSchedule(r.id);
+        });
+      }
+
       routeTabsContainer.appendChild(pill);
     });
 
@@ -397,9 +517,9 @@
     addBtn.type = 'button';
     addBtn.className = 'route-tab-add';
     addBtn.textContent = '+';
-    addBtn.setAttribute('data-tooltip', 'Tambah rute baru');
-    addBtn.setAttribute('aria-label', 'Tambah rute baru');
-    addBtn.addEventListener('click', promptAddNewRoute);
+    addBtn.setAttribute('data-tooltip', hiddenRoutes.length > 0 ? 'Kelola rute di jadwal (' + hiddenRoutes.length + ' tersimpan)' : 'Tambah rute baru');
+    addBtn.setAttribute('aria-label', 'Tambah rute ke jadwal');
+    addBtn.addEventListener('click', openScheduleRoutePicker);
     routeTabsContainer.appendChild(addBtn);
 
     // Active strip details
@@ -409,7 +529,27 @@
     arsMetaText.innerHTML = cur.jamMulai + '&ndash;' + cur.jamSelesai + ' &middot; ' + cur.ritase + 'R &middot; ' + activeUnits + 'u';
 
     if (unitCardTitle) unitCardTitle.textContent = 'Armada: ' + cur.name;
+    renderSubRouteBars();
     renderRouteList();
+  }
+
+  function renderSubRouteBars(){
+    const unitBar = $('unitRouteBar');
+    const orderBar = $('orderRouteBar');
+    const cur = getActiveRoute();
+    const schedRoutes = state.routes.filter(r => r.activeInSchedule !== false);
+    [unitBar, orderBar].forEach(bar => {
+      if (!bar) return;
+      bar.innerHTML = '';
+      schedRoutes.forEach(r => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sub-route-pill' + (r.id === cur.id ? ' active' : '');
+        btn.innerHTML = '<span class="rtp-color" style="background:' + (r.color || '#FFB020') + '"></span><span>' + escapeHtml(r.name) + '</span>';
+        btn.addEventListener('click', () => switchActiveRoute(r.id));
+        bar.appendChild(btn);
+      });
+    });
   }
 
   function switchActiveRoute(routeId){
@@ -426,10 +566,24 @@
     if (cur.committedSchedule && cur.committedSchedule.rows && cur.committedSchedule.rows.length){
       lastSchedule = reconstructDisplaySchedule(cur);
       render(lastSchedule);
-      resultSection.style.display = 'block';
+      if (resultSection) resultSection.style.display = 'block';
     } else {
       lastSchedule = null;
-      resultSection.style.display = 'none';
+      if (statTotal) statTotal.textContent = '—';
+      if (statDurasi) statDurasi.textContent = '—';
+      if (statUnit) statUnit.textContent = '—';
+      if (patternNote) patternNote.textContent = '';
+      if (boardBody) {
+        boardBody.innerHTML = '<div style="padding:28px 16px; text-align:center; color:var(--text-muted); font-size:12px;">' +
+          '<div style="font-size:24px; margin-bottom:6px;">📋</div>' +
+          '<div style="font-weight:700; color:var(--text); margin-bottom:4px;">Belum Ada Jadwal untuk ' + escapeHtml(cur.name) + '</div>' +
+          '<div style="margin-bottom:10px;">Klik tombol "Buat Jadwal" untuk menghitung keberangkatan.</div>' +
+          '<button type="button" class="btn-mini amber" id="quickGenEmptyBtn" style="padding:7px 14px; font-weight:700; cursor:pointer;">⚡ Buat Jadwal Sekarang</button>' +
+        '</div>';
+        const emptyBtn = boardBody.querySelector('#quickGenEmptyBtn');
+        if (emptyBtn && generateBtn) emptyBtn.addEventListener('click', () => generateBtn.click());
+      }
+      if (resultSection) resultSection.style.display = 'block';
     }
     renderDirtyBanner();
     clearError();
@@ -558,35 +712,12 @@
 
   if (delRouteBtn) delRouteBtn.addEventListener('click', () => {
     const cur = getActiveRoute();
-    if (state.routes.length <= 1){
-      showToast('Minimal harus ada 1 rute aktif di sistem', 'error');
+    const schedRoutes = state.routes.filter(r => r.activeInSchedule !== false);
+    if (schedRoutes.length <= 1){
+      showToast('Minimal 1 rute harus tetap tampil di jadwal. Silakan gunakan tab "Rute" jika ingin mengelola rute.', 'error');
       return;
     }
-    const doDelete = () => {
-      state.routes = state.routes.filter(r => r.id !== cur.id);
-      state.activeRouteId = state.routes[0].id;
-      saveState();
-      switchActiveRoute(state.activeRouteId);
-      showToast('Rute "' + cur.name + '" dihapus');
-    };
-
-    if (typeof Swal === 'undefined'){
-      if (window.confirm('Hapus rute "' + cur.name + '" beserta jadwalnya?')) doDelete();
-      return;
-    }
-
-    Swal.fire({
-      title: 'Hapus rute "' + cur.name + '"?',
-      text: 'Semua konfigurasi jam, ritase, dan unit untuk rute ini akan dihapus permanen.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Hapus',
-      cancelButtonText: 'Batal',
-      background: '#1D222A', color: '#ECEAE4',
-      confirmButtonColor: '#FF6B5E', cancelButtonColor: '#333A46'
-    }).then(res => {
-      if (res.isConfirmed) doDelete();
-    });
+    removeRouteFromSchedule(cur.id);
   });
 
   // Panel Unit: Route Manager List
@@ -599,6 +730,7 @@
     state.routes.forEach(r => {
       const activeCount = r.masterUnits.filter(u => u.active).length;
       const isCur = r.id === cur.id;
+      const inSched = r.activeInSchedule !== false;
       const card = document.createElement('div');
       card.className = 'route-manage-card';
       if (isCur) card.style.borderColor = r.color || '#FFB020';
@@ -607,12 +739,17 @@
         ? (r.scheduleDirty ? '<span style="color:var(--amber); font-weight:700;">\u26A0 Perlu Dihitung Ulang</span>' : '<span style="color:#50E3C2; font-weight:700;">\u2713 Jadwal Siap (' + r.committedSchedule.rows.length + ' dep)</span>')
         : '<span style="color:var(--text-muted);">Belum ada jadwal</span>';
 
+      const inSchedBadge = inSched
+        ? '<span class="rtp-badge" style="background:rgba(80,227,194,0.18); color:#50E3C2; font-weight:700;">✓ DI JADWAL</span>'
+        : '<span class="rtp-badge" style="background:rgba(255,255,255,0.06); color:var(--text-muted);">DISEMBUNYIKAN</span>';
+
       card.innerHTML =
         '<div class="rmc-head">' +
           '<div class="rmc-name">' +
             '<span class="rtp-color" style="background:' + (r.color || '#FFB020') + '"></span>' +
             '<span>' + escapeHtml(r.name) + '</span>' +
             (isCur ? '<span class="rtp-badge" style="background:var(--amber); color:#1A1300; font-weight:700;">AKTIF</span>' : '') +
+            inSchedBadge +
           '</div>' +
           '<div style="font-size:11.5px;">' + schedStatus + '</div>' +
         '</div>' +
@@ -622,8 +759,12 @@
         '</div>' +
         '<div class="rmc-actions">' +
           (!isCur ? '<button type="button" class="btn-mini amber rmc-select-btn" data-id="' + r.id + '" data-tooltip="Buka rute ini">&#10148; Buka</button>' : '<span class="btn-mini" style="opacity:0.6; cursor:default;">Aktif</span>') +
+          (inSched
+            ? '<button type="button" class="btn-mini outline rmc-sched-toggle-btn" data-id="' + r.id + '" data-tooltip="Keluarkan dari daftar jadwal keberangkatan">&times; Keluarkan</button>'
+            : '<button type="button" class="btn-mini emerald rmc-sched-toggle-btn" data-id="' + r.id + '" data-tooltip="Tampilkan kembali di daftar jadwal keberangkatan">+ Ke Jadwal</button>'
+          ) +
           '<button type="button" class="icon-btn rmc-dup-btn" data-id="' + r.id + '" data-tooltip="Duplikasi rute" aria-label="Duplikasi">&#10697;</button>' +
-          (state.routes.length > 1 ? '<button type="button" class="icon-btn danger rmc-del-btn" data-id="' + r.id + '" data-tooltip="Hapus rute" aria-label="Hapus rute">&#128465;</button>' : '') +
+          (state.routes.length > 1 ? '<button type="button" class="icon-btn danger rmc-del-btn" data-id="' + r.id + '" data-tooltip="Hapus rute permanen" aria-label="Hapus rute">&#128465;</button>' : '') +
         '</div>';
 
       routeListContainer.appendChild(card);
@@ -631,6 +772,21 @@
 
     routeListContainer.querySelectorAll('.rmc-select-btn').forEach(btn => {
       btn.addEventListener('click', () => switchActiveRoute(btn.getAttribute('data-id')));
+    });
+    routeListContainer.querySelectorAll('.rmc-sched-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const target = state.routes.find(r => r.id === id);
+        if (!target) return;
+        if (target.activeInSchedule !== false){
+          removeRouteFromSchedule(id);
+        } else {
+          target.activeInSchedule = true;
+          saveState();
+          switchActiveRoute(target.id);
+          showToast('Rute "' + target.name + '" ditampilkan di jadwal');
+        }
+      });
     });
     routeListContainer.querySelectorAll('.rmc-dup-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1177,7 +1333,10 @@
     const bnavUnitBadge = $('bnavUnitBadge');
     if (bnavUnitBadge) bnavUnitBadge.textContent = active;
     const bnavRouteBadge = $('bnavRouteBadge');
-    if (bnavRouteBadge) bnavRouteBadge.textContent = state.routes.length;
+    if (bnavRouteBadge) {
+      const schedCount = state.routes.filter(r => r.activeInSchedule !== false).length;
+      bnavRouteBadge.textContent = schedCount;
+    }
     const bnavJadwalDot = $('bnavJadwalDot');
     if (bnavJadwalDot){
       const hasSched = cur.committedSchedule && cur.committedSchedule.rows && cur.committedSchedule.rows.length;
@@ -1446,7 +1605,17 @@
 
   // ===== SCHEDULE COMPUTATION (PER ROUTE & ALL ROUTES) =====
   const errorBox = $('errorBox'), generateBtn = $('generateBtn'), generateAllBtn = $('generateAllBtn'), resultSection = $('resultSection');
-  function showError(msg){ errorBox.textContent = msg; errorBox.classList.add('show'); resultSection.style.display = 'none'; }
+  function showError(msg){
+    errorBox.textContent = msg;
+    errorBox.classList.add('show');
+    if (boardBody) {
+      boardBody.innerHTML = '<div style="padding:24px 16px; text-align:center; color:var(--rose); font-size:12px;">' +
+        '<div style="font-size:24px; margin-bottom:6px;">⚠️</div>' +
+        '<div style="font-weight:700; margin-bottom:4px;">Gagal Menghitung Jadwal</div>' +
+        '<div>' + escapeHtml(msg) + '</div>' +
+      '</div>';
+    }
+  }
   function clearError(){ errorBox.classList.remove('show'); }
 
   let lastSchedule = null;
@@ -1653,12 +1822,13 @@
   if (generateAllBtn) {
     generateAllBtn.addEventListener('click', () => {
       clearError();
-      const ok = confirm('Hitung dan buat jadwal untuk SEMUA ' + state.routes.length + ' rute sekaligus berdasarkan jam operasional & ritase masing-masing?');
+      const schedRoutes = state.routes.filter(r => r.activeInSchedule !== false);
+      const ok = confirm('Hitung dan buat jadwal untuk ' + schedRoutes.length + ' rute yang aktif di jadwal berdasarkan jam operasional & ritase masing-masing?');
       if (!ok) return;
 
       let successCount = 0;
       const errors = [];
-      state.routes.forEach(r => {
+      schedRoutes.forEach(r => {
         const sched = generateScheduleForRoute(r, true);
         if (sched) successCount++;
         else errors.push(r.name);
@@ -1677,7 +1847,7 @@
       if (errors.length > 0){
         showToast('Selesai: ' + successCount + ' rute. Gagal: ' + errors.join(', '), 'error');
       } else {
-        showToast('Semua ' + successCount + ' rute berhasil dibuat jadwalnya!');
+        showToast(successCount + ' rute aktif berhasil dibuat jadwalnya!');
       }
     });
   }
@@ -1856,7 +2026,8 @@
     const allRows = [];
     let activeRoutesCount = 0;
 
-    state.routes.forEach(r => {
+    const schedRoutes = state.routes.filter(r => r.activeInSchedule !== false);
+    schedRoutes.forEach(r => {
       if (r.committedSchedule && r.committedSchedule.rows && r.committedSchedule.rows.length){
         activeRoutesCount++;
         r.committedSchedule.rows.forEach(row => {
@@ -2289,6 +2460,7 @@
     const due = [];
 
     state.routes.forEach(r => {
+      if (r.activeInSchedule === false) return;
       if (!r.alarmEnabled) return;
       if (!r.committedSchedule || !r.committedSchedule.rows || !r.committedSchedule.rows.length) return;
       r.committedSchedule.rows.forEach((row, idx) => {
@@ -2339,7 +2511,7 @@
     }
     if (typeof Swal === 'undefined'){ showToast('Export butuh library UI', 'error'); return; }
 
-    const routesWithSched = state.routes.filter(r => r.committedSchedule && r.committedSchedule.rows && r.committedSchedule.rows.length);
+    const routesWithSched = state.routes.filter(r => r.activeInSchedule !== false && r.committedSchedule && r.committedSchedule.rows && r.committedSchedule.rows.length);
 
     Swal.fire(Object.assign({
       title: 'Pilih Mode Export',
@@ -2502,7 +2674,7 @@
   // Export SEMUA RUTE Sekaligus (Multi-Sheet XLSX)
   function exportAllRoutesXLSX(){
     if (typeof XLSX === 'undefined'){ showToast('Library XLSX belum siap', 'error'); return; }
-    const routesWithSched = state.routes.filter(r => r.committedSchedule && r.committedSchedule.rows && r.committedSchedule.rows.length);
+    const routesWithSched = state.routes.filter(r => r.activeInSchedule !== false && r.committedSchedule && r.committedSchedule.rows && r.committedSchedule.rows.length);
     if (routesWithSched.length === 0){
       showToast('Belum ada rute dengan jadwal yang siap diekspor', 'error');
       return;
