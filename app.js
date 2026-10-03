@@ -254,6 +254,64 @@
     $('dirtyBanner').classList.toggle('show', !!cur.scheduleDirty);
   }
 
+  // ===== UNIVERSAL FLOATING TOOLTIP & PRESS-AND-HOLD SYSTEM =====
+  const tipEl = document.createElement('div');
+  tipEl.className = 'floating-tip';
+  tipEl.id = 'floatingTip';
+  document.body.appendChild(tipEl);
+  let hideTipTimer = null;
+
+  function showFloatingTip(text, targetEl){
+    if (!text || !targetEl) return;
+    clearTimeout(hideTipTimer);
+    tipEl.textContent = text;
+    tipEl.classList.add('show');
+    const rect = targetEl.getBoundingClientRect();
+    const tipWidth = tipEl.offsetWidth || 160;
+    let left = rect.left + (rect.width / 2) - (tipWidth / 2);
+    left = Math.max(8, Math.min(window.innerWidth - tipWidth - 8, left));
+    let top = rect.top - (tipEl.offsetHeight || 28) - 6;
+    if (top < 10) top = rect.bottom + 6;
+    tipEl.style.left = left + 'px';
+    tipEl.style.top = top + 'px';
+    hideTipTimer = setTimeout(() => { tipEl.classList.remove('show'); }, 2200);
+  }
+
+  function hideFloatingTip(){
+    clearTimeout(hideTipTimer);
+    tipEl.classList.remove('show');
+  }
+
+  // Tap on info button (.tip-btn)
+  document.addEventListener('click', (e) => {
+    const tipBtn = e.target.closest('.tip-btn');
+    if (tipBtn){
+      e.preventDefault();
+      e.stopPropagation();
+      showFloatingTip(tipBtn.getAttribute('data-tip'), tipBtn);
+      return;
+    }
+    hideFloatingTip();
+  });
+
+  // Long-press / hold (280ms) on any icon with data-tooltip
+  let holdTimer = null;
+  let holdTarget = null;
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('[data-tooltip]');
+    if (!el) return;
+    holdTarget = el;
+    holdTimer = setTimeout(() => {
+      if (holdTarget === el){
+        showFloatingTip(el.getAttribute('data-tooltip'), el);
+      }
+    }, 280);
+  }, { passive: true });
+
+  document.addEventListener('pointerup', () => { clearTimeout(holdTimer); holdTarget = null; }, { passive: true });
+  document.addEventListener('pointercancel', () => { clearTimeout(holdTimer); holdTarget = null; hideFloatingTip(); }, { passive: true });
+  document.addEventListener('pointermove', () => { clearTimeout(holdTimer); }, { passive: true });
+
   // ===== TAB SWITCHING (MOBILE BOTTOM NAV & TOP TABS) =====
   const tabJadwalBtn = $('tabJadwalBtn'), tabUnitBtn = $('tabUnitBtn'), tabOrderBtn = $('tabOrderBtn'), tabRouteBtn = $('tabRouteBtn');
   const panelJadwal = $('panelJadwal'), panelUnit = $('panelUnit'), panelOrder = $('panelOrder'), panelRoute = $('panelRoute');
@@ -338,7 +396,9 @@
     const addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.className = 'route-tab-add';
-    addBtn.textContent = '+ Tambah';
+    addBtn.textContent = '+';
+    addBtn.setAttribute('data-tooltip', 'Tambah rute baru');
+    addBtn.setAttribute('aria-label', 'Tambah rute baru');
     addBtn.addEventListener('click', promptAddNewRoute);
     routeTabsContainer.appendChild(addBtn);
 
@@ -346,10 +406,9 @@
     arsColorDot.style.background = cur.color || '#FFB020';
     arsNameText.textContent = cur.name;
     const activeUnits = cur.masterUnits.filter(u => u.active).length;
-    const peakInfo = cur.peakEnabled ? 'Jam Sibuk: Aktif' : 'Jam Sibuk: Nonaktif';
-    arsMetaText.innerHTML = cur.jamMulai + ' &ndash; ' + cur.jamSelesai + ' &middot; ' + cur.ritase + ' Rit &middot; ' + activeUnits + ' Unit Aktif &middot; ' + peakInfo;
+    arsMetaText.innerHTML = cur.jamMulai + '&ndash;' + cur.jamSelesai + ' &middot; ' + cur.ritase + 'R &middot; ' + activeUnits + 'u';
 
-    if (unitCardTitle) unitCardTitle.textContent = 'Unit Armada: ' + cur.name;
+    if (unitCardTitle) unitCardTitle.textContent = 'Armada: ' + cur.name;
     renderRouteList();
   }
 
@@ -419,9 +478,11 @@
     });
   }
 
-  addRouteTopBtn.addEventListener('click', promptAddNewRoute);
-  $('saveRouteBtn').addEventListener('click', () => {
-    const val = $('newRouteNameInput').value.trim();
+  if (addRouteTopBtn) addRouteTopBtn.addEventListener('click', promptAddNewRoute);
+  const saveRouteBtnEl = $('saveRouteBtn');
+  if (saveRouteBtnEl) saveRouteBtnEl.addEventListener('click', () => {
+    const nameInput = $('newRouteNameInput');
+    const val = nameInput ? nameInput.value.trim() : '';
     if (!val){ showToast('Isi nama rute terlebih dahulu', 'error'); return; }
     if (state.routes.some(r => r.name.toLowerCase() === val.toLowerCase())){
       showToast('Nama rute sudah ada', 'error'); return;
@@ -431,12 +492,12 @@
     state.routes.push(newRoute);
     state.activeRouteId = newRoute.id;
     saveState();
-    $('newRouteNameInput').value = '';
+    if (nameInput) nameInput.value = '';
     switchActiveRoute(newRoute.id);
     showToast('Rute "' + val + '" dibuat');
   });
 
-  renameRouteBtn.addEventListener('click', () => {
+  if (renameRouteBtn) renameRouteBtn.addEventListener('click', () => {
     const cur = getActiveRoute();
     const doRename = (name) => {
       cur.name = name;
@@ -466,7 +527,7 @@
     });
   });
 
-  dupRouteBtn.addEventListener('click', () => {
+  if (dupRouteBtn) dupRouteBtn.addEventListener('click', () => {
     const cur = getActiveRoute();
     const dupName = cur.name + ' (Salinan)';
     const color = ROUTE_PALETTE[(state.routes.length) % ROUTE_PALETTE.length];
@@ -495,7 +556,7 @@
     showToast('Rute diduplikasi');
   });
 
-  delRouteBtn.addEventListener('click', () => {
+  if (delRouteBtn) delRouteBtn.addEventListener('click', () => {
     const cur = getActiveRoute();
     if (state.routes.length <= 1){
       showToast('Minimal harus ada 1 rute aktif di sistem', 'error');
@@ -553,16 +614,16 @@
             '<span>' + escapeHtml(r.name) + '</span>' +
             (isCur ? '<span class="rtp-badge" style="background:var(--amber); color:#1A1300; font-weight:700;">AKTIF</span>' : '') +
           '</div>' +
-          '<div style="font-size:12px;">' + schedStatus + '</div>' +
+          '<div style="font-size:11.5px;">' + schedStatus + '</div>' +
         '</div>' +
         '<div class="rmc-details">' +
-          'Jam Operasional: ' + r.jamMulai + ' &ndash; ' + r.jamSelesai + ' &middot; ' + r.ritase + ' Rit &middot; ' + activeCount + ' / ' + r.masterUnits.length + ' Unit Aktif<br>' +
-          'Jam Sibuk: ' + (r.peakEnabled ? (r.peak1Start + '-' + r.peak1End + ' (' + r.peak1Interval + 'm) & ' + r.peak2Start + '-' + r.peak2End + ' (' + r.peak2Interval + 'm)') : 'Nonaktif') +
+          r.jamMulai + '&ndash;' + r.jamSelesai + ' &middot; ' + r.ritase + 'R &middot; ' + activeCount + '/' + r.masterUnits.length + 'u' +
+          (r.peakEnabled ? (' &middot; Sibuk ' + r.peak1Start + '-' + r.peak1End + ' (' + r.peak1Interval + 'm), ' + r.peak2Start + '-' + r.peak2End + ' (' + r.peak2Interval + 'm)') : '') +
         '</div>' +
         '<div class="rmc-actions">' +
-          (!isCur ? '<button type="button" class="btn-mini amber rmc-select-btn" data-id="' + r.id + '">Buka / Edit Rute Ini</button>' : '<span class="btn-mini" style="opacity:0.6; cursor:default;">Sedang Dibuka</span>') +
-          '<button type="button" class="btn-mini rmc-dup-btn" data-id="' + r.id + '">&#10697; Duplikasi</button>' +
-          (state.routes.length > 1 ? '<button type="button" class="btn-mini rmc-del-btn" style="color:var(--danger);" data-id="' + r.id + '">&#128465; Hapus</button>' : '') +
+          (!isCur ? '<button type="button" class="btn-mini amber rmc-select-btn" data-id="' + r.id + '" data-tooltip="Buka rute ini">&#10148; Buka</button>' : '<span class="btn-mini" style="opacity:0.6; cursor:default;">Aktif</span>') +
+          '<button type="button" class="icon-btn rmc-dup-btn" data-id="' + r.id + '" data-tooltip="Duplikasi rute" aria-label="Duplikasi">&#10697;</button>' +
+          (state.routes.length > 1 ? '<button type="button" class="icon-btn danger rmc-del-btn" data-id="' + r.id + '" data-tooltip="Hapus rute" aria-label="Hapus rute">&#128465;</button>' : '') +
         '</div>';
 
       routeListContainer.appendChild(card);
@@ -663,87 +724,119 @@
     });
   });
 
-  ritaseInput.addEventListener('change', () => {
-    let v = Math.max(1, Math.min(30, parseInt(ritaseInput.value) || 1));
-    ritaseInput.value = v;
-    const cur = getActiveRoute();
-    cur.ritase = v;
-    saveState();
-    markDirtyIfCommitted(cur);
-    renderRouteBar();
-  });
-  $('ritaseMinus').addEventListener('click', () => {
-    ritaseInput.value = Math.max(1, (parseInt(ritaseInput.value)||1) - 1);
-    ritaseInput.dispatchEvent(new Event('change'));
-  });
-  $('ritasePlus').addEventListener('click', () => {
-    ritaseInput.value = Math.min(30, (parseInt(ritaseInput.value)||1) + 1);
-    ritaseInput.dispatchEvent(new Event('change'));
-  });
-
-  [ [peak1Interval,'peak1Interval'], [peak2Interval,'peak2Interval'] ].forEach(([el,key]) => {
-    el.addEventListener('change', () => {
-      let v = Math.max(1, Math.min(60, parseInt(el.value) || 1));
-      el.value = v;
+  if (ritaseInput) {
+    ritaseInput.addEventListener('change', () => {
+      let v = Math.max(1, Math.min(30, parseInt(ritaseInput.value) || 1));
+      ritaseInput.value = v;
       const cur = getActiveRoute();
-      cur[key] = v;
+      cur.ritase = v;
       saveState();
       markDirtyIfCommitted(cur);
       renderRouteBar();
     });
+  }
+  const ritaseMinusBtn = $('ritaseMinus');
+  if (ritaseMinusBtn) {
+    ritaseMinusBtn.addEventListener('click', () => {
+      if (ritaseInput) {
+        ritaseInput.value = Math.max(1, (parseInt(ritaseInput.value)||1) - 1);
+        ritaseInput.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+  const ritasePlusBtn = $('ritasePlus');
+  if (ritasePlusBtn) {
+    ritasePlusBtn.addEventListener('click', () => {
+      if (ritaseInput) {
+        ritaseInput.value = Math.min(30, (parseInt(ritaseInput.value)||1) + 1);
+        ritaseInput.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  [ [peak1Interval,'peak1Interval'], [peak2Interval,'peak2Interval'] ].forEach(([el,key]) => {
+    if (el) {
+      el.addEventListener('change', () => {
+        let v = Math.max(1, Math.min(60, parseInt(el.value) || 1));
+        el.value = v;
+        const cur = getActiveRoute();
+        cur[key] = v;
+        saveState();
+        markDirtyIfCommitted(cur);
+        renderRouteBar();
+      });
+    }
   });
 
-  peakToggle.addEventListener('click', () => {
-    const cur = getActiveRoute();
-    cur.peakEnabled = !cur.peakEnabled;
-    peakToggle.classList.toggle('on', cur.peakEnabled);
-    setPeakInputsDisabled(!cur.peakEnabled);
-    saveState();
-    markDirtyIfCommitted(cur);
-    renderRouteBar();
-  });
+  if (peakToggle) {
+    peakToggle.addEventListener('click', () => {
+      const cur = getActiveRoute();
+      cur.peakEnabled = !cur.peakEnabled;
+      peakToggle.classList.toggle('on', cur.peakEnabled);
+      setPeakInputsDisabled(!cur.peakEnabled);
+      saveState();
+      markDirtyIfCommitted(cur);
+      renderRouteBar();
+    });
+  }
 
-  orderFastFirst.addEventListener('click', () => {
-    const cur = getActiveRoute();
-    cur.groupOrder = 'fast-first';
-    orderFastFirst.classList.add('active');
-    orderSlowFirst.classList.remove('active');
-    saveState();
-    markDirtyIfCommitted(cur);
-  });
-  orderSlowFirst.addEventListener('click', () => {
-    const cur = getActiveRoute();
-    cur.groupOrder = 'slow-first';
-    orderSlowFirst.classList.add('active');
-    orderFastFirst.classList.remove('active');
-    saveState();
-    markDirtyIfCommitted(cur);
-  });
+  if (orderFastFirst) {
+    orderFastFirst.addEventListener('click', () => {
+      const cur = getActiveRoute();
+      cur.groupOrder = 'fast-first';
+      orderFastFirst.classList.add('active');
+      if (orderSlowFirst) orderSlowFirst.classList.remove('active');
+      saveState();
+      markDirtyIfCommitted(cur);
+    });
+  }
+  if (orderSlowFirst) {
+    orderSlowFirst.addEventListener('click', () => {
+      const cur = getActiveRoute();
+      cur.groupOrder = 'slow-first';
+      orderSlowFirst.classList.add('active');
+      if (orderFastFirst) orderFastFirst.classList.remove('active');
+      saveState();
+      markDirtyIfCommitted(cur);
+    });
+  }
 
-  alarmToggle.addEventListener('click', () => {
-    const cur = getActiveRoute();
-    cur.alarmEnabled = !cur.alarmEnabled;
-    alarmToggle.classList.toggle('on', cur.alarmEnabled);
-    alarmDurationInput.disabled = !cur.alarmEnabled;
-    alarmDurMinus.disabled = !cur.alarmEnabled;
-    alarmDurPlus.disabled = !cur.alarmEnabled;
-    saveState();
-  });
-  alarmDurationInput.addEventListener('change', () => {
-    let v = Math.max(1, Math.min(30, parseInt(alarmDurationInput.value) || 8));
-    alarmDurationInput.value = v;
-    const cur = getActiveRoute();
-    cur.alarmDuration = v;
-    saveState();
-  });
-  alarmDurMinus.addEventListener('click', () => {
-    alarmDurationInput.value = Math.max(1, (parseInt(alarmDurationInput.value)||1) - 1);
-    alarmDurationInput.dispatchEvent(new Event('change'));
-  });
-  alarmDurPlus.addEventListener('click', () => {
-    alarmDurationInput.value = Math.min(30, (parseInt(alarmDurationInput.value)||1) + 1);
-    alarmDurationInput.dispatchEvent(new Event('change'));
-  });
+  if (alarmToggle) {
+    alarmToggle.addEventListener('click', () => {
+      const cur = getActiveRoute();
+      cur.alarmEnabled = !cur.alarmEnabled;
+      alarmToggle.classList.toggle('on', cur.alarmEnabled);
+      if (alarmDurationInput) alarmDurationInput.disabled = !cur.alarmEnabled;
+      if (alarmDurMinus) alarmDurMinus.disabled = !cur.alarmEnabled;
+      if (alarmDurPlus) alarmDurPlus.disabled = !cur.alarmEnabled;
+      saveState();
+    });
+  }
+  if (alarmDurationInput) {
+    alarmDurationInput.addEventListener('change', () => {
+      let v = Math.max(1, Math.min(30, parseInt(alarmDurationInput.value) || 8));
+      alarmDurationInput.value = v;
+      const cur = getActiveRoute();
+      cur.alarmDuration = v;
+      saveState();
+    });
+  }
+  if (alarmDurMinus) {
+    alarmDurMinus.addEventListener('click', () => {
+      if (alarmDurationInput) {
+        alarmDurationInput.value = Math.max(1, (parseInt(alarmDurationInput.value)||1) - 1);
+        alarmDurationInput.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+  if (alarmDurPlus) {
+    alarmDurPlus.addEventListener('click', () => {
+      if (alarmDurationInput) {
+        alarmDurationInput.value = Math.min(30, (parseInt(alarmDurationInput.value)||1) + 1);
+        alarmDurationInput.dispatchEvent(new Event('change'));
+      }
+    });
+  }
 
   // ===== DAFTAR UNIT & URUTAN =====
   const unitListContainer = $('unitListContainer');
@@ -789,8 +882,10 @@
     if (n > 0){
       bulkUnitsBar.style.display = 'flex';
       bulkCountText.textContent = n + ' dipilih';
+      if (unitListContainer) unitListContainer.classList.add('has-bulk');
     } else {
       bulkUnitsBar.style.display = 'none';
+      if (unitListContainer) unitListContainer.classList.remove('has-bulk');
     }
   }
 
@@ -812,7 +907,7 @@
       filterUnitsActive.classList.toggle('active', unitFilter === 'active');
     }
     if (filterUnitsInactive){
-      filterUnitsInactive.textContent = 'Nonaktif (' + totalInactive + ')';
+      filterUnitsInactive.textContent = 'Off (' + totalInactive + ')';
       filterUnitsInactive.classList.toggle('active', unitFilter === 'inactive');
     }
 
@@ -820,7 +915,9 @@
 
     if (selectAllUnitsBtn){
       const allSelected = filtered.length > 0 && filtered.every(u => selectedUnitIds.has(String(u.id)));
-      selectAllUnitsBtn.textContent = allSelected ? '\u2611 Batal Pilih' : '\u2610 Pilih Semua';
+      selectAllUnitsBtn.innerHTML = allSelected ? '&#9746;' : '&#9745;';
+      selectAllUnitsBtn.setAttribute('data-tooltip', allSelected ? 'Batal pilih semua' : 'Pilih semua unit');
+      selectAllUnitsBtn.setAttribute('aria-label', allSelected ? 'Batal pilih semua' : 'Pilih semua unit');
     }
 
     updateBulkBar();
@@ -850,8 +947,8 @@
           '<span class="unit-status-tag ' + (u.active ? 'active' : 'inactive') + '">' + (u.active ? 'Aktif' : 'Off') + '</span>' +
         '</div>' +
         '<div class="unit-row-actions">' +
-          '<button type="button" class="del-btn" data-id="' + escapeHtml(uIdStr) + '" data-num="' + escapeHtml(String(u.number)) + '">&#128465; Hapus</button>' +
-          '<div class="switch' + (u.active ? ' on' : '') + '" data-id="' + escapeHtml(uIdStr) + '" data-num="' + escapeHtml(String(u.number)) + '" title="Klik untuk ' + (u.active ? 'menonaktifkan' : 'mengaktifkan') + ' unit ' + escapeHtml(String(u.number)) + '"><div class="knob"></div></div>' +
+          '<button type="button" class="del-btn" data-id="' + escapeHtml(uIdStr) + '" data-num="' + escapeHtml(String(u.number)) + '" data-tooltip="Hapus unit ' + escapeHtml(String(u.number)) + '" aria-label="Hapus unit">&#128465;</button>' +
+          '<div class="switch' + (u.active ? ' on' : '') + '" data-id="' + escapeHtml(uIdStr) + '" data-num="' + escapeHtml(String(u.number)) + '" data-tooltip="' + (u.active ? 'Nonaktifkan unit' : 'Aktifkan unit') + '"><div class="knob"></div></div>' +
         '</div>';
 
       unitListContainer.appendChild(row);
@@ -1089,11 +1186,13 @@
     }
   }
 
-  $('addUnitBtn').addEventListener('click', addUnit);
-  $('newUnitInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') addUnit(); });
+  const addUnitBtnEl = $('addUnitBtn');
+  if (addUnitBtnEl) addUnitBtnEl.addEventListener('click', addUnit);
+  const newUnitInputEl = $('newUnitInput');
+  if (newUnitInputEl) newUnitInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addUnit(); });
   function addUnit(){
     const input = $('newUnitInput');
-    const val = input.value.trim();
+    const val = input ? input.value.trim() : '';
     if (!val) return;
     const cur = getActiveRoute();
     if (cur.masterUnits.some(u => String(u.number).trim() === val)){ showToast('Nomor unit sudah ada di rute ini', 'error'); return; }
@@ -1101,7 +1200,7 @@
     cur.masterUnits.push({ id, number: val, active: true });
     cur.departureOrder.push(id);
     saveState();
-    input.value = '';
+    if (input) input.value = '';
     renderUnitList();
     updateActiveSummary();
     markDirtyIfCommitted(cur);
@@ -1120,11 +1219,13 @@
   }
 
   function updateMultiSelectBar(){
+    if (!orderListContainer || !multiSelectBar) return;
     const n = orderListContainer.querySelectorAll('.order-row.selected').length;
     multiSelectBar.style.display = n > 0 ? 'flex' : 'none';
-    multiSelectCount.textContent = n + ' unit dipilih';
+    if (multiSelectCount) multiSelectCount.textContent = n + ' unit dipilih';
   }
-  $('clearSelectionBtn').addEventListener('click', () => { renderOrderList(); });
+  const clearSelectionBtnEl = $('clearSelectionBtn');
+  if (clearSelectionBtnEl) clearSelectionBtnEl.addEventListener('click', () => { renderOrderList(); });
 
   function renderOrderList(){
     const cur = getActiveRoute();
@@ -1148,12 +1249,12 @@
       row.className = 'order-row';
       row.setAttribute('data-id', id);
       row.innerHTML =
-        '<span class="handle" title="Tahan dan geser">&#9776;</span>' +
+        '<span class="handle" data-tooltip="Tahan &amp; geser urutan" aria-label="Geser urutan">&#9776;</span>' +
         '<span class="idx">' + String(idx+1).padStart(2,'0') + '</span>' +
         '<span class="num">' + escapeHtml(u.number) + '</span>' +
         '<div class="order-row-quick-btns">' +
-          '<button type="button" class="order-step-btn order-step-up" data-idx="' + idx + '" title="Pindah ke atas" ' + (idx === 0 ? 'disabled style="opacity:0.25; pointer-events:none;"' : '') + '>&uarr;</button>' +
-          '<button type="button" class="order-step-btn order-step-down" data-idx="' + idx + '" title="Pindah ke bawah" ' + (idx === cur.departureOrder.length - 1 ? 'disabled style="opacity:0.25; pointer-events:none;"' : '') + '>&darr;</button>' +
+          '<button type="button" class="order-step-btn order-step-up" data-idx="' + idx + '" data-tooltip="Pindah ke atas" aria-label="Pindah ke atas" ' + (idx === 0 ? 'disabled style="opacity:0.25; pointer-events:none;"' : '') + '>&uarr;</button>' +
+          '<button type="button" class="order-step-btn order-step-down" data-idx="' + idx + '" data-tooltip="Pindah ke bawah" aria-label="Pindah ke bawah" ' + (idx === cur.departureOrder.length - 1 ? 'disabled style="opacity:0.25; pointer-events:none;"' : '') + '>&darr;</button>' +
         '</div>';
       orderListContainer.appendChild(row);
     });
@@ -1527,58 +1628,63 @@
   }
 
   // Buat Jadwal Rute Ini
-  generateBtn.addEventListener('click', () => {
-    clearError();
-    const cur = getActiveRoute();
-    if (cur.committedSchedule && cur.committedSchedule.rows && cur.committedSchedule.rows.length){
-      const ok = confirm('Ini akan menghapus histori jadwal rute "' + cur.name + '" hari ini dan membuat jadwal baru. Lanjutkan?');
-      if (!ok) return;
-    }
-    const sched = generateScheduleForRoute(cur);
-    if (!sched) return;
-    lastSchedule = sched;
-    resetAlarmTracking();
-    render(lastSchedule);
-    renderDirtyBanner();
-    renderRouteBar();
-    refreshPapanIfOpen();
-    resultSection.scrollIntoView({behavior:'smooth', block:'start'});
-    showToast('Jadwal rute ' + cur.name + ' siap');
-  });
-
-  // Buat Jadwal SEMUA RUTE Sekaligus
-  generateAllBtn.addEventListener('click', () => {
-    clearError();
-    const ok = confirm('Hitung dan buat jadwal untuk SEMUA ' + state.routes.length + ' rute sekaligus berdasarkan jam operasional & ritase masing-masing?');
-    if (!ok) return;
-
-    let successCount = 0;
-    const errors = [];
-    state.routes.forEach(r => {
-      const sched = generateScheduleForRoute(r, true);
-      if (sched) successCount++;
-      else errors.push(r.name);
-    });
-
-    resetAlarmTracking();
-    const cur = getActiveRoute();
-    if (cur.committedSchedule){
-      lastSchedule = reconstructDisplaySchedule(cur);
+  if (generateBtn) {
+    generateBtn.addEventListener('click', () => {
+      clearError();
+      const cur = getActiveRoute();
+      if (cur.committedSchedule && cur.committedSchedule.rows && cur.committedSchedule.rows.length){
+        const ok = confirm('Ini akan menghapus histori jadwal rute "' + cur.name + '" hari ini dan membuat jadwal baru. Lanjutkan?');
+        if (!ok) return;
+      }
+      const sched = generateScheduleForRoute(cur);
+      if (!sched) return;
+      lastSchedule = sched;
+      resetAlarmTracking();
       render(lastSchedule);
       renderDirtyBanner();
-    }
-    renderRouteBar();
-    refreshPapanIfOpen();
+      renderRouteBar();
+      refreshPapanIfOpen();
+      if (resultSection) resultSection.scrollIntoView({behavior:'smooth', block:'start'});
+      showToast('Jadwal rute ' + cur.name + ' siap');
+    });
+  }
 
-    if (errors.length > 0){
-      showToast('Selesai: ' + successCount + ' rute. Gagal: ' + errors.join(', '), 'error');
-    } else {
-      showToast('Semua ' + successCount + ' rute berhasil dibuat jadwalnya!');
-    }
-  });
+  // Buat Jadwal SEMUA RUTE Sekaligus
+  if (generateAllBtn) {
+    generateAllBtn.addEventListener('click', () => {
+      clearError();
+      const ok = confirm('Hitung dan buat jadwal untuk SEMUA ' + state.routes.length + ' rute sekaligus berdasarkan jam operasional & ritase masing-masing?');
+      if (!ok) return;
+
+      let successCount = 0;
+      const errors = [];
+      state.routes.forEach(r => {
+        const sched = generateScheduleForRoute(r, true);
+        if (sched) successCount++;
+        else errors.push(r.name);
+      });
+
+      resetAlarmTracking();
+      const cur = getActiveRoute();
+      if (cur.committedSchedule){
+        lastSchedule = reconstructDisplaySchedule(cur);
+        render(lastSchedule);
+        renderDirtyBanner();
+      }
+      renderRouteBar();
+      refreshPapanIfOpen();
+
+      if (errors.length > 0){
+        showToast('Selesai: ' + successCount + ' rute. Gagal: ' + errors.join(', '), 'error');
+      } else {
+        showToast('Semua ' + successCount + ' rute berhasil dibuat jadwalnya!');
+      }
+    });
+  }
 
   // Hitung Ulang Sisa Jadwal (Recalc)
-  $('recalcBtn').addEventListener('click', recalcRemaining);
+  const recalcBtnEl = $('recalcBtn');
+  if (recalcBtnEl) recalcBtnEl.addEventListener('click', recalcRemaining);
   function recalcRemaining(){
     const cur = getActiveRoute();
     const cs = cur.committedSchedule;
@@ -1683,8 +1789,10 @@
   }
 
   // Copy as Text (WhatsApp Optimized)
-  $('copyBtn').addEventListener('click', () => {
-    if (!lastSchedule) return;
+  const copyBtnEl = $('copyBtn');
+  if (copyBtnEl) {
+    copyBtnEl.addEventListener('click', () => {
+      if (!lastSchedule) return;
     const cur = getActiveRoute();
     const now = new Date();
     const dateFormatted = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -1722,7 +1830,8 @@
     } else {
       fallbackCopy(text, doneMsg);
     }
-  });
+    });
+  }
   function fallbackCopy(text, cb){
     const ta = document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
     document.body.appendChild(ta); ta.select();
@@ -1791,19 +1900,23 @@
   let countdownWarningActive = false;
   let countdownWarningSoundTimer = null;
 
-  pmsActiveBtn.addEventListener('click', () => {
-    papanMode = 'active';
-    pmsActiveBtn.classList.add('active');
-    pmsCombinedBtn.classList.remove('active');
-    renderPapanBoard();
-  });
+  if (pmsActiveBtn) {
+    pmsActiveBtn.addEventListener('click', () => {
+      papanMode = 'active';
+      pmsActiveBtn.classList.add('active');
+      if (pmsCombinedBtn) pmsCombinedBtn.classList.remove('active');
+      renderPapanBoard();
+    });
+  }
 
-  pmsCombinedBtn.addEventListener('click', () => {
-    papanMode = 'combined';
-    pmsCombinedBtn.classList.add('active');
-    pmsActiveBtn.classList.remove('active');
-    renderPapanBoard();
-  });
+  if (pmsCombinedBtn) {
+    pmsCombinedBtn.addEventListener('click', () => {
+      papanMode = 'combined';
+      pmsCombinedBtn.classList.add('active');
+      if (pmsActiveBtn) pmsActiveBtn.classList.remove('active');
+      renderPapanBoard();
+    });
+  }
 
   function getActivePapanSchedule(){
     if (papanMode === 'combined'){
@@ -2007,14 +2120,25 @@
     }
   });
 
-  openPapanBtn.addEventListener('click', () => {
-    papanMode = 'active';
-    openPapanModal();
-  });
-  openPapanCombinedBtn.addEventListener('click', () => {
-    papanMode = 'combined';
-    openPapanModal();
-  });
+  if (openPapanBtn) {
+    openPapanBtn.addEventListener('click', () => {
+      papanMode = 'active';
+      openPapanModal();
+    });
+  }
+  if (openPapanCombinedBtn) {
+    openPapanCombinedBtn.addEventListener('click', () => {
+      papanMode = 'combined';
+      openPapanModal();
+    });
+  }
+  const headerMonitorBtn = $('headerMonitorBtn');
+  if (headerMonitorBtn) {
+    headerMonitorBtn.addEventListener('click', () => {
+      papanMode = 'active';
+      openPapanModal();
+    });
+  }
 
   function openPapanModal(){
     const sched = getActivePapanSchedule();
@@ -2038,7 +2162,7 @@
     if (document.fullscreenElement){ document.exitFullscreen().catch(()=>{}); }
     else if (document.webkitFullscreenElement && document.webkitExitFullscreen){ document.webkitExitFullscreen(); }
   }
-  papanExitBtn.addEventListener('click', closePapanMode);
+  if (papanExitBtn) papanExitBtn.addEventListener('click', closePapanMode);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && papanOverlay.classList.contains('show')) closePapanMode(); });
 
   // ===== MULTI-ROUTE SIMULTANEOUS ALARM =====
@@ -2158,7 +2282,7 @@
     activeAlarmRows = [];
     updatePapanHighlight();
   }
-  alarmOkBtn.addEventListener('click', dismissAlarm);
+  if (alarmOkBtn) alarmOkBtn.addEventListener('click', dismissAlarm);
 
   function checkAlarmTriggers(now){
     const hhmm = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
@@ -2491,7 +2615,7 @@
     }).catch(() => showToast('Gagal export gambar', 'error'));
   }
 
-  exportMenuBtn.addEventListener('click', openExportMenu);
+  if (exportMenuBtn) exportMenuBtn.addEventListener('click', openExportMenu);
 
   // ===== INITIALIZATION =====
   renderRouteBar();
@@ -2506,7 +2630,7 @@
     render(lastSchedule);
   } else {
     // Generate initial schedule for route
-    generateBtn.click();
+    if (generateBtn) generateBtn.click();
   }
   renderDirtyBanner();
 

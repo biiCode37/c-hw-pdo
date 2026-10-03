@@ -9,9 +9,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0C1017">
 <title>Jadwal Keberangkatan - Dispatcher Mikrotrans</title>
-<meta name="description" content="Aplikasi mobile-first manajemen jadwal keberangkatan armada bus otomatis & monitor papan display untuk pengawas jalur.">
+<meta name="description" content="Aplikasi mobile dispatcher jadwal keberangkatan armada bus otomatis & monitor papan display.">
 <meta property="og:title" content="Jadwal Keberangkatan">
-<meta property="og:description" content="Aplikasi mobile-first manajemen jadwal keberangkatan armada bus otomatis & monitor papan display untuk pengawas jalur.">
+<meta property="og:description" content="Aplikasi mobile dispatcher jadwal keberangkatan armada bus otomatis & monitor papan display.">
 
 <!-- PWA: manifest & icons -->
 <link rel="manifest" href="manifest.json">
@@ -52,94 +52,166 @@
     --text-muted: #94A3B8;
     --text-dim: #64748B;
     --r-item-bg: rgba(255, 255, 255, 0.015);
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-top: env(safe-area-inset-top, 0px);
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; padding: 0; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     min-height: 100vh;
-    padding-bottom: calc(76px + var(--safe-bottom));
+    padding-bottom: calc(64px + var(--safe-bottom));
     -webkit-font-smoothing: antialiased;
     touch-action: manipulation;
   }
   .mono { font-family: 'Space Mono', monospace; font-variant-numeric: tabular-nums; }
 
-  /* ===== MOBILE-FIRST TOP APP HEADER ===== */
+  /* ===== FLOATING TOOLTIP POPUP ===== */
+  .floating-tip {
+    position: fixed;
+    z-index: 10000;
+    background: #1A2230;
+    color: #F8FAFC;
+    border: 1px solid var(--amber);
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-size: 11px;
+    line-height: 1.35;
+    max-width: 250px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.7), 0 0 12px rgba(245,158,11,0.25);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .floating-tip.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Info Tooltip Icon Button */
+  .tip-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-2);
+    color: var(--amber);
+    font-size: 10.5px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 5px;
+    vertical-align: middle;
+    transition: all .15s ease;
+    flex-shrink: 0;
+  }
+  .tip-btn:active {
+    background: var(--amber);
+    color: #1A1300;
+    transform: scale(0.9);
+  }
+
+  /* Icon Button Base */
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 13.5px;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: all .12s ease;
+  }
+  .icon-btn:active {
+    transform: scale(0.92);
+    background: var(--surface-3);
+  }
+  .icon-btn.danger { color: var(--danger); }
+  .icon-btn.danger:active { background: var(--danger); color: #FFF; }
+  .icon-btn-accent {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--amber);
+    color: #1A1300;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: all .12s ease;
+  }
+  .icon-btn-accent:active { transform: scale(0.92); }
+
+  /* ===== ULTRA-COMPACT TOP APP HEADER ===== */
   .app-header {
     position: sticky;
     top: 0;
     z-index: 40;
-    background: rgba(12, 16, 23, 0.94);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(12, 16, 23, 0.95);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--line);
-    padding: calc(8px + var(--safe-top)) 14px 8px;
+    padding: calc(6px + var(--safe-top)) 12px 6px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
+    height: calc(46px + var(--safe-top));
   }
   .header-left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
   }
   .brand-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
     background: linear-gradient(135deg, #F59E0B, #D97706);
     display: flex;
     align-items: center;
     justify-content: center;
     color: #1A1300;
     font-weight: 800;
-    font-size: 15px;
+    font-size: 13px;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
   }
-  .header-titles {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    line-height: 1.15;
-  }
-  .brand-sub {
-    font-family: 'Space Mono', monospace;
-    font-size: 9.5px;
-    letter-spacing: 0.12em;
-    color: var(--amber);
-    font-weight: 700;
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .brand-sub .live-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--amber);
-    box-shadow: 0 0 6px var(--amber);
-    animation: livePulse 2s infinite ease-in-out;
-  }
-  @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.85); } }
-
   .brand-title {
     margin: 0;
     font-family: 'Space Mono', monospace;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 800;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
     color: var(--text);
     white-space: nowrap;
   }
@@ -148,45 +220,45 @@
   .header-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
   }
   .live-clock {
     font-family: 'Space Mono', monospace;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     color: var(--amber);
     background: var(--surface-2);
     border: 1px solid var(--line);
-    padding: 6px 9px;
+    padding: 5px 8px;
     border-radius: var(--radius-sm);
     font-variant-numeric: tabular-nums;
   }
   .quick-monitor-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 7px 11px;
+    width: 32px;
+    height: 32px;
     border-radius: var(--radius-sm);
     background: var(--amber);
     color: #1A1300;
     border: none;
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
     box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
-    transition: transform .1s ease, filter .15s ease;
+    transition: transform .1s ease;
   }
-  .quick-monitor-btn:active { transform: scale(0.95); }
+  .quick-monitor-btn:active { transform: scale(0.92); }
 
-  /* ===== MAIN CONTAINER (MOBILE FIRST) ===== */
+  /* ===== MAIN CONTAINER ===== */
   main {
-    max-width: 640px;
+    max-width: 520px;
     margin: 0 auto;
-    padding: 10px 12px 24px;
+    padding: 8px 10px 18px;
+    width: 100%;
+    overflow-x: hidden;
   }
 
   /* ===== HORIZONTAL ROUTE SELECTOR CAROUSEL ===== */
@@ -194,235 +266,213 @@
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
-    padding: 10px 12px;
-    margin-bottom: 12px;
-  }
-  .route-nav-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    padding: 8px 10px;
     margin-bottom: 8px;
   }
-  .rnh-title {
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: var(--text-muted);
-    text-transform: uppercase;
+  .route-nav-top-row {
     display: flex;
     align-items: center;
-    gap: 5px;
-  }
-  .rnh-actions .btn-mini {
-    padding: 5px 9px;
-    border-radius: 6px;
-    font-size: 10.5px;
-    font-family: 'Space Mono', monospace;
-    font-weight: 700;
-    cursor: pointer;
-    border: 1px solid var(--line);
-    background: var(--surface-2);
-    color: var(--text);
-    transition: all .15s ease;
-  }
-  .rnh-actions .btn-mini.amber {
-    background: rgba(245, 158, 11, 0.15);
-    color: var(--amber);
-    border-color: rgba(245, 158, 11, 0.35);
-  }
-  .rnh-actions .btn-mini:active { transform: scale(0.95); }
-
-  .route-tabs-container {
-    display: flex;
-    gap: 7px;
+    gap: 6px;
     overflow-x: auto;
-    padding-bottom: 3px;
+    padding-bottom: 2px;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
-  .route-tabs-container::-webkit-scrollbar { display: none; }
+  .route-nav-top-row::-webkit-scrollbar { display: none; }
 
   .route-tab-pill {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 11px;
-    border-radius: 9px;
+    gap: 5px;
+    padding: 5px 9px;
+    border-radius: 7px;
     background: var(--surface-2);
     border: 1px solid var(--line);
     color: var(--text-muted);
     cursor: pointer;
-    transition: all .15s ease;
+    transition: all .12s ease;
     user-select: none;
   }
-  .route-tab-pill:active { transform: scale(0.97); }
+  .route-tab-pill:active { transform: scale(0.96); }
   .route-tab-pill.active {
     background: rgba(245, 158, 11, 0.14);
     border-color: var(--amber);
     color: var(--text);
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.18);
   }
-  .rtp-color { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .rtp-name { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text); }
+  .rtp-color { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .rtp-name { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text); }
   .route-tab-pill.active .rtp-name { color: var(--amber); }
-  .rtp-badge { font-size: 10px; padding: 2px 5px; border-radius: 4px; background: rgba(0, 0, 0, 0.25); color: var(--text-muted); font-family: 'Space Mono', monospace; }
-  .rtp-status { width: 7px; height: 7px; border-radius: 50%; background: #475569; flex-shrink: 0; }
-  .rtp-status.ready { background: var(--emerald); box-shadow: 0 0 6px rgba(16, 185, 129, 0.7); }
-  .rtp-status.dirty { background: var(--amber); box-shadow: 0 0 6px rgba(245, 158, 11, 0.7); }
+  .rtp-badge { font-size: 9.5px; padding: 1px 4px; border-radius: 3px; background: rgba(0, 0, 0, 0.25); color: var(--text-muted); font-family: 'Space Mono', monospace; }
+  .rtp-status { width: 6px; height: 6px; border-radius: 50%; background: #475569; flex-shrink: 0; }
+  .rtp-status.ready { background: var(--emerald); }
+  .rtp-status.dirty { background: var(--amber); }
 
   .route-tab-add {
     flex-shrink: 0;
-    padding: 7px 11px;
-    border-radius: 9px;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
     background: transparent;
     border: 1px dashed var(--line-strong);
     color: var(--text-muted);
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 15px;
     cursor: pointer;
-    white-space: nowrap;
-    transition: all .15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all .12s ease;
   }
-  .route-tab-add:active { border-color: var(--amber); color: var(--amber); transform: scale(0.96); }
+  .route-tab-add:active { border-color: var(--amber); color: var(--amber); transform: scale(0.92); }
 
   /* Active Route Strip Summary */
   .active-route-strip {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 9px;
-    padding-top: 8px;
-    border-top: 1px dashed var(--line);
-    gap: 8px;
-    flex-wrap: wrap;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--line-subtle);
+    gap: 6px;
   }
-  .ars-left { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
+  .ars-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
   .ars-name-badge {
     font-family: 'Space Mono', monospace;
     font-weight: 700;
-    font-size: 12px;
-    padding: 3px 8px;
-    border-radius: 6px;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 5px;
     background: var(--surface-2);
     border: 1px solid var(--line);
     color: var(--amber);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
+    flex-shrink: 0;
   }
-  .ars-meta { color: var(--text-muted); font-size: 11px; font-family: 'Space Mono', monospace; }
-  .ars-right { display: flex; gap: 5px; flex-shrink: 0; }
-  .ars-action-btn {
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-    border-radius: 6px;
+  .ars-meta {
     color: var(--text-muted);
-    padding: 4px 8px;
-    font-size: 11px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .15s ease;
+    font-size: 10.5px;
+    font-family: 'Space Mono', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .ars-action-btn:active { border-color: var(--amber); color: var(--text); transform: scale(0.95); }
-  .ars-action-btn.danger:active { border-color: var(--danger); color: var(--danger); }
+  .ars-right {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
 
   /* ===== PANELS ARCHITECTURE ===== */
   .panel { display: none; }
-  .panel.active { display: block; animation: panelFadeIn .16s ease; }
-  @keyframes panelFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .panel.active { display: block; animation: panelFadeIn .14s ease; }
+  @keyframes panelFadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* Hidden desktop duplicate tabs helper */
+  /* Hidden tabs helper for backwards compatibility */
   .tabs { display: none; }
 
-  /* ===== MODERN CARD STYLES ===== */
+  /* ===== COMPACT CARD STYLES ===== */
   .card {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
-    padding: 14px 14px 16px;
-    margin-bottom: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
   }
   .card h2 {
-    font-size: 11px;
+    font-size: 10.5px;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     color: var(--text-muted);
-    margin: 0 0 12px;
+    margin: 0 0 9px;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
-  .row { display: flex; gap: 10px; }
-  .field { flex: 1; margin-bottom: 12px; }
+  .row { display: flex; gap: 8px; }
+  .field { flex: 1; margin-bottom: 9px; min-width: 0; }
   .field:last-child { margin-bottom: 0; }
-  .field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; }
+  .field label {
+    display: flex;
+    align-items: center;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
 
   /* Inputs & Form Controls */
   input[type=time], input[type=number], input[type=text], textarea {
     width: 100%;
+    min-width: 0;
     background: var(--surface-2);
     border: 1px solid var(--line);
-    border-radius: 9px;
+    border-radius: var(--radius-sm);
     color: var(--text);
-    padding: 11px 12px;
-    font-size: 15px;
+    padding: 8px 10px;
+    font-size: 14px;
     font-family: 'Space Mono', monospace;
-    transition: border-color .15s ease, box-shadow .15s ease;
+    transition: border-color .15s ease;
   }
   input[type=time]::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) saturate(4) hue-rotate(-10deg); }
-  input:focus, textarea:focus { outline: none; border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-glow); }
-  .hint { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; line-height: 1.45; }
+  input:focus, textarea:focus { outline: none; border-color: var(--amber); }
 
-  /* Large Tactile Steppers (Thumb-friendly) */
+  /* Tactile Stepper */
   .stepper { display: flex; align-items: center; width: 100%; }
   .stepper button {
-    width: 48px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
     background: var(--surface-2);
     border: 1px solid var(--line);
     color: var(--amber);
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 800;
     cursor: pointer;
     user-select: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background .1s ease, transform .1s ease;
+    transition: background .1s ease;
+    flex-shrink: 0;
   }
   .stepper button:active { background: var(--surface-3); transform: scale(0.93); }
-  .stepper button:first-child { border-radius: 9px 0 0 9px; }
-  .stepper button:last-child { border-radius: 0 9px 9px 0; }
-  .stepper input { text-align: center; border-radius: 0; border-left: none; border-right: none; height: 44px; font-weight: 700; font-size: 16px; }
+  .stepper button:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .stepper button:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .stepper input { text-align: center; border-radius: 0; border-left: none; border-right: none; height: 38px; font-weight: 700; font-size: 15px; }
 
   /* Headway Order Toggle */
-  .order-toggle { display: flex; gap: 6px; }
+  .order-toggle { display: flex; gap: 5px; }
   .order-toggle button {
     flex: 1;
-    padding: 11px 6px;
-    border-radius: 9px;
+    padding: 8px 5px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--line);
     background: var(--surface-2);
     color: var(--text-muted);
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
     cursor: pointer;
     text-align: center;
-    transition: all .15s ease;
+    transition: all .12s ease;
+    white-space: nowrap;
   }
   .order-toggle button.active { background: var(--amber); color: #1A1300; border-color: var(--amber); font-weight: 800; }
 
   /* Advanced Drawers */
-  details.advanced { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; margin-top: 6px; padding: 0; }
+  details.advanced { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); margin-top: 6px; padding: 0; }
   details.advanced summary {
-    padding: 12px 14px;
-    font-size: 12.5px;
+    padding: 9px 11px;
+    font-size: 11.5px;
     font-weight: 700;
     color: var(--text-muted);
     cursor: pointer;
@@ -434,262 +484,247 @@
   details.advanced summary::-webkit-details-marker { display: none; }
   .summary-label::before { content: "▸ "; color: var(--amber); }
   details.advanced[open] .summary-label::before { content: "▾ "; color: var(--amber); }
-  .advanced-body { padding: 0 14px 14px; }
-  .peak-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0 14px 12px; }
-  .peak-toggle-row span { font-size: 12.5px; color: var(--text); font-weight: 600; }
-  .peak-block { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 6px; }
-  .peak-block-title { font-size: 11px; color: var(--sky); font-weight: 700; margin-bottom: 6px; font-family: 'Space Mono', monospace; }
+  .advanced-body { padding: 0 11px 11px; }
+  .peak-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0 11px 9px; }
+  .peak-toggle-row span { font-size: 11.5px; color: var(--text); font-weight: 600; display: flex; align-items: center; }
+  .peak-block { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 6px; }
+  .peak-block-title { font-size: 10px; color: var(--sky); font-weight: 700; margin-bottom: 5px; font-family: 'Space Mono', monospace; }
 
   /* Dirty Banner */
   .dirty-banner {
     background: rgba(245, 158, 11, 0.12);
     border: 1.5px solid var(--amber);
-    border-radius: var(--radius-md);
-    padding: 13px 14px;
-    margin-bottom: 12px;
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    margin-bottom: 8px;
     display: none;
   }
-  .dirty-banner.show { display: block; animation: panelFadeIn .2s ease; }
-  .dirty-banner p { margin: 0 0 10px; font-size: 12.5px; color: var(--text); line-height: 1.45; font-weight: 500; }
+  .dirty-banner.show { display: flex; align-items: center; justify-content: space-between; gap: 8px; animation: panelFadeIn .15s ease; }
+  .dirty-banner-text { font-size: 11px; color: var(--text); font-weight: 600; }
   .dirty-banner button {
-    width: 100%;
-    padding: 12px;
+    padding: 6px 10px;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--amber);
     color: #1A1300;
     font-weight: 800;
     font-family: 'Space Mono', monospace;
-    font-size: 12.5px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-size: 11px;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+    white-space: nowrap;
   }
-  .dirty-banner button:active { transform: scale(0.97); }
 
   .error-box {
     background: #2D1412;
     border: 1.5px solid var(--danger);
     color: #FEE2E2;
-    border-radius: 9px;
-    padding: 12px 14px;
-    font-size: 13px;
+    border-radius: var(--radius-sm);
+    padding: 9px 11px;
+    font-size: 12px;
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     display: none;
   }
-  .error-box.show { display: flex; align-items: flex-start; gap: 8px; }
+  .error-box.show { display: flex; align-items: flex-start; gap: 6px; }
 
-  /* Generate Buttons Row (Primary CTA) */
-  .generate-group { display: flex; gap: 8px; margin: 14px 0 18px; }
+  /* Primary Action Buttons */
+  .generate-group { display: flex; gap: 6px; margin: 10px 0 12px; }
   .generate-btn-main {
     flex: 2;
-    padding: 15px 12px;
+    padding: 12px 10px;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     background: var(--amber);
     color: #1A1300;
     font-family: 'Space Mono', monospace;
     font-weight: 800;
-    font-size: 13.5px;
-    letter-spacing: 0.05em;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
-    transition: transform .1s ease, filter .15s ease;
+    box-shadow: 0 3px 10px rgba(245, 158, 11, 0.25);
+    transition: transform .1s ease;
   }
-  .generate-btn-main:active { transform: scale(0.97); filter: brightness(0.95); }
+  .generate-btn-main:active { transform: scale(0.97); }
   .generate-btn-all {
     flex: 1;
-    padding: 15px 10px;
+    padding: 12px 8px;
     border: 1px solid var(--amber);
-    border-radius: var(--radius-md);
-    background: rgba(245, 158, 11, 0.12);
+    border-radius: var(--radius-sm);
+    background: rgba(245, 158, 11, 0.1);
     color: var(--amber);
     font-family: 'Space Mono', monospace;
     font-weight: 700;
-    font-size: 11.5px;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
+    font-size: 11px;
     cursor: pointer;
-    transition: all .15s ease;
+    white-space: nowrap;
+    transition: all .12s ease;
   }
-  .generate-btn-all:active { transform: scale(0.97); background: rgba(245, 158, 11, 0.22); }
+  .generate-btn-all:active { transform: scale(0.97); background: rgba(245, 158, 11, 0.2); }
 
-  /* Schedule Result Summary Stats */
-  #resultSection { display: none; margin-top: 8px; }
-  .summary { display: flex; gap: 8px; margin-bottom: 12px; }
+  /* Result Summary Stats */
+  #resultSection { display: none; margin-top: 6px; }
+  .summary { display: flex; gap: 6px; margin-bottom: 8px; }
   .stat {
     flex: 1;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    padding: 10px 10px;
+    border-radius: var(--radius-sm);
+    padding: 8px 6px;
     text-align: center;
   }
-  .stat .n { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 800; color: var(--amber); line-height: 1.1; }
-  .stat .l { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; font-weight: 600; }
+  .stat .n { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 800; color: var(--amber); line-height: 1.1; }
+  .stat .l { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; font-weight: 600; }
   
   .pattern-note {
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--text-muted);
     background: var(--surface);
     border: 1px dashed var(--line);
-    border-radius: var(--radius-md);
-    padding: 10px 12px;
-    margin-bottom: 12px;
-    line-height: 1.5;
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    line-height: 1.4;
   }
   .pattern-note b { color: var(--sky); }
 
-  .action-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .action-row { display: flex; gap: 6px; margin-bottom: 8px; }
   .ghost-btn {
     flex: 1;
-    padding: 12px;
-    border-radius: var(--radius-md);
+    padding: 10px 8px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--line);
     background: var(--surface);
     color: var(--text);
     font-family: 'Inter', sans-serif;
     font-weight: 600;
-    font-size: 12.5px;
+    font-size: 12px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    transition: all .15s ease;
+    gap: 5px;
+    transition: all .12s ease;
   }
   .ghost-btn:active { background: var(--surface-2); transform: scale(0.97); }
   .ghost-btn.copied { background: rgba(16, 185, 129, 0.2); border-color: var(--emerald); color: var(--emerald); }
 
-  .papan-actions-group { display: flex; gap: 8px; margin-bottom: 14px; }
+  .papan-actions-group { display: flex; gap: 6px; margin-bottom: 10px; }
   .papan-btn {
     flex: 1;
-    padding: 12px 10px;
+    padding: 10px 8px;
     border: 1.5px solid var(--amber-dim);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     background: var(--surface);
     color: var(--amber);
     font-family: 'Space Mono', monospace;
     font-weight: 700;
-    font-size: 11.5px;
-    letter-spacing: 0.03em;
+    font-size: 11px;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    transition: all .15s ease;
+    gap: 5px;
+    transition: all .12s ease;
   }
   .papan-btn:active { transform: scale(0.97); }
   .papan-btn-combined { background: rgba(56, 189, 248, 0.1) !important; color: var(--sky) !important; border-color: rgba(56, 189, 248, 0.35) !important; }
 
   /* Schedule Table (Board) */
-  .board { border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; background: var(--surface); }
+  .board { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
   .board-head {
     display: grid;
-    grid-template-columns: 42px 42px 1fr 82px;
-    padding: 9px 12px;
+    grid-template-columns: 36px 36px 1fr 72px;
+    padding: 7px 10px;
     background: var(--surface-2);
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: 10px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-muted);
     font-weight: 700;
     border-bottom: 1px solid var(--line);
     position: sticky;
-    top: 50px;
+    top: 46px;
     z-index: 4;
+    column-gap: 4px;
   }
   .ritase-divider {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 7px 12px;
+    gap: 6px;
+    padding: 6px 10px;
     background: var(--surface-2);
     border-top: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
   }
-  .ritase-divider .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
-  .ritase-divider span { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: var(--amber); text-transform: uppercase; font-weight: 700; }
+  .ritase-divider .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); }
+  .ritase-divider span { font-family: 'Space Mono', monospace; font-size: 10.5px; letter-spacing: 0.1em; color: var(--amber); text-transform: uppercase; font-weight: 700; }
   .interval-divider {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 6px 12px;
+    gap: 6px;
+    padding: 5px 10px;
     background: rgba(56, 189, 248, 0.07);
     border-top: 1px solid var(--line);
     border-bottom: 1px dashed rgba(56, 189, 248, 0.25);
   }
-  .interval-divider .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sky); }
-  .interval-divider span { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--sky); font-weight: 700; }
+  .interval-divider .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--sky); }
+  .interval-divider span { font-family: 'Space Mono', monospace; font-size: 9.5px; color: var(--sky); font-weight: 700; }
 
   .recalc-divider {
-    padding: 7px 12px;
+    padding: 6px 10px;
     background: rgba(245, 158, 11, 0.15);
-    border-top: 1.5px solid var(--amber);
-    border-bottom: 1.5px solid var(--amber);
+    border-top: 1px solid var(--amber);
+    border-bottom: 1px solid var(--amber);
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
+    font-size: 10.5px;
     color: var(--amber);
     font-weight: 700;
   }
 
   .row-item {
     display: grid;
-    grid-template-columns: 42px 42px 1fr 82px;
+    grid-template-columns: 36px 36px 1fr 72px;
     align-items: center;
-    padding: 10px 12px;
+    padding: 8px 10px;
     background: var(--surface);
     border-top: 1px solid var(--line-subtle);
-    font-size: 14px;
-    transition: background .12s ease;
+    font-size: 13.5px;
+    column-gap: 4px;
   }
   .row-item:nth-child(odd) { background: var(--r-item-bg); }
   .row-item.peak { border-left: 3px solid var(--amber); }
-  .row-item.history { opacity: 0.5; }
-  .row-item .no { color: var(--text-muted); font-family: 'Space Mono', monospace; font-size: 12px; }
-  .row-item .unit { font-weight: 700; font-family: 'Space Mono', monospace; font-size: 14.5px; }
-  .row-item .jam { font-family: 'Space Mono', monospace; font-weight: 800; color: var(--amber); text-align: right; font-size: 15px; }
-  .jam-wrap { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
-  .gap-label { font-size: 9.5px; color: var(--text-muted); font-family: 'Space Mono', monospace; margin-top: 2px; }
+  .row-item.history { opacity: 0.45; }
+  .row-item .no { color: var(--text-muted); font-family: 'Space Mono', monospace; font-size: 11.5px; }
+  .row-item .unit { font-weight: 700; font-family: 'Space Mono', monospace; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row-item .jam { font-family: 'Space Mono', monospace; font-weight: 800; color: var(--amber); text-align: right; font-size: 14.5px; }
+  .jam-wrap { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+  .gap-label { font-size: 9px; color: var(--text-muted); font-family: 'Space Mono', monospace; margin-top: 2px; }
 
-  /* ===== ARMADA / DAFTAR UNIT (Mobile First) ===== */
-  .add-unit-row { display: flex; gap: 8px; margin-bottom: 10px; }
-  .add-unit-row input { flex: 1; }
-  .add-unit-row button {
-    padding: 0 16px;
-    border: none;
-    border-radius: 9px;
-    background: var(--amber);
-    color: #1A1300;
-    font-weight: 800;
-    font-family: 'Space Mono', monospace;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  .add-unit-row button:active { transform: scale(0.95); }
+  /* ===== ARMADA / DAFTAR UNIT (Ultra-compact) ===== */
+  .add-unit-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .add-unit-row input { flex: 1; height: 38px; }
 
   /* Real-time search bar */
   .unit-search-wrap {
     position: relative;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .unit-search-input {
     width: 100%;
     background: var(--surface-2);
     border: 1px solid var(--line);
-    border-radius: 9px;
-    padding: 9px 12px 9px 34px;
-    font-size: 13.5px;
+    border-radius: var(--radius-sm);
+    padding: 7px 10px 7px 30px;
+    font-size: 13px;
     color: var(--text);
+    height: 34px;
   }
   .unit-search-icon {
     position: absolute;
-    left: 11px;
+    left: 9px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-muted);
@@ -700,124 +735,111 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
   }
-  .unit-filter-pills { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+  .unit-filter-pills { display: flex; gap: 3px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 2px; }
   .uf-pill {
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 5px 8px;
+    border-radius: 5px;
     border: none;
     background: transparent;
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 10.5px;
     font-family: 'Space Mono', monospace;
     font-weight: 700;
     cursor: pointer;
-    transition: all .15s ease;
+    transition: all .12s ease;
   }
   .uf-pill.active { background: var(--amber); color: #1A1300; }
-  .unit-select-all-btn {
-    padding: 6px 11px;
-    border-radius: 7px;
-    border: 1px solid var(--line);
-    background: var(--surface-2);
-    color: var(--text);
-    font-size: 11px;
-    font-family: 'Space Mono', monospace;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .15s ease;
-  }
-  .unit-select-all-btn:active { border-color: var(--amber); color: var(--amber); }
 
-  /* Floating Bottom Bulk Actions Bar (Thumb Zone) */
+  /* Floating Bottom Bulk Actions Bar */
   .bulk-units-bar {
     position: fixed;
-    bottom: calc(72px + var(--safe-bottom));
-    left: 14px;
-    right: 14px;
-    max-width: 612px;
+    bottom: calc(56px + var(--safe-bottom));
+    left: 10px;
+    right: 10px;
+    max-width: 500px;
     margin: 0 auto;
-    z-index: 70;
+    z-index: 75;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 10px 14px;
+    gap: 6px;
+    padding: 8px 12px;
     border-radius: var(--radius-md);
-    background: #18202C;
+    background: #19212E;
     border: 1.5px solid var(--amber);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.75), 0 0 16px rgba(245, 158, 11, 0.25);
-    animation: bulkPopIn .2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 12px rgba(245, 158, 11, 0.25);
+    animation: bulkPopIn .18s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  @keyframes bulkPopIn { from { transform: translateY(14px) scale(0.96); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-  .bub-count { font-family: 'Space Mono', monospace; font-weight: 800; font-size: 12px; color: var(--amber); white-space: nowrap; }
-  .bub-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  @keyframes bulkPopIn { from { transform: translateY(12px) scale(0.96); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+  .bub-count { font-family: 'Space Mono', monospace; font-weight: 800; font-size: 11.5px; color: var(--amber); white-space: nowrap; }
+  .bub-actions { display: flex; align-items: center; gap: 5px; }
   .bub-btn {
-    padding: 7px 10px;
-    border-radius: 7px;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
     border: none;
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 800;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    padding: 0;
   }
-  .bub-btn:active { transform: scale(0.95); }
-  .bub-btn.activate { background: rgba(16, 185, 129, 0.22); color: var(--emerald); border: 1px solid var(--emerald); }
-  .bub-btn.deactivate { background: rgba(245, 158, 11, 0.2); color: var(--amber); border: 1px solid var(--amber); }
-  .bub-btn.danger { background: rgba(239, 68, 68, 0.22); color: var(--danger); border: 1px solid var(--danger); }
-  .bub-btn.cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--line); padding: 7px 9px; }
+  .bub-btn:active { transform: scale(0.92); }
+  .bub-btn.activate { background: rgba(16, 185, 129, 0.25); color: var(--emerald); border: 1px solid var(--emerald); }
+  .bub-btn.deactivate { background: rgba(245, 158, 11, 0.25); color: var(--amber); border: 1px solid var(--amber); }
+  .bub-btn.danger { background: rgba(239, 68, 68, 0.25); color: var(--danger); border: 1px solid var(--danger); }
+  .bub-btn.cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--line); }
 
   /* Unit Row Layout */
-  .unit-list { border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; background: var(--surface); }
+  .unit-list { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
+  .unit-list.has-bulk { padding-bottom: 50px; }
   .unit-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 11px 14px;
+    padding: 9px 12px;
     background: var(--surface);
     border-top: 1px solid var(--line-subtle);
     transition: background .12s ease;
   }
   .unit-row:first-child { border-top: none; }
   .unit-row.selected { background: rgba(245, 158, 11, 0.09); }
-  .unit-row-left { display: flex; align-items: center; gap: 11px; min-width: 0; }
-  .unit-checkbox { width: 20px; height: 20px; accent-color: var(--amber); cursor: pointer; flex-shrink: 0; }
-  .unit-row .num { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; color: var(--text); }
+  .unit-row-left { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .unit-checkbox { width: 18px; height: 18px; accent-color: var(--amber); cursor: pointer; flex-shrink: 0; }
+  .unit-row .num { font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700; color: var(--text); }
   .unit-row.inactive .num { color: var(--text-dim); text-decoration: line-through; }
-  .unit-status-tag { font-size: 10px; font-family: 'Space Mono', monospace; font-weight: 700; padding: 2px 6px; border-radius: 5px; text-transform: uppercase; }
+  .unit-status-tag { font-size: 9px; font-family: 'Space Mono', monospace; font-weight: 700; padding: 1px 5px; border-radius: 4px; text-transform: uppercase; }
   .unit-status-tag.active { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
   .unit-status-tag.inactive { background: rgba(255, 255, 255, 0.05); color: var(--text-dim); border: 1px solid var(--line); }
 
-  .unit-row-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .unit-row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .del-btn {
-    height: 36px;
-    padding: 0 10px;
+    width: 32px;
+    height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
     background: var(--surface-2);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     color: var(--danger);
-    font-size: 12px;
-    font-family: 'Space Mono', monospace;
-    font-weight: 700;
+    font-size: 13px;
     cursor: pointer;
-    transition: all .15s ease;
+    padding: 0;
+    transition: all .12s ease;
   }
   .del-btn:active { background: var(--danger); color: #FFF; border-color: var(--danger); transform: scale(0.92); }
 
-  /* Large Tactile Toggle Switch (Touch Optimized) */
+  /* Tactile Toggle Switch */
   .switch {
-    width: 48px;
-    height: 28px;
+    width: 44px;
+    height: 26px;
     border-radius: 999px;
     background: var(--surface-2);
     position: relative;
@@ -831,47 +853,47 @@
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: var(--text);
     transition: transform .18s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .switch.on .knob { transform: translateX(20px); background: #1A1300; }
+  .switch.on .knob { transform: translateX(18px); background: #1A1300; }
 
   /* ===== URUTAN KEBERANGKATAN ===== */
   .order-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 11px 14px;
+    gap: 8px;
+    padding: 9px 12px;
     background: var(--surface);
     border-top: 1px solid var(--line-subtle);
     user-select: none;
   }
   .order-row:first-child { border-top: none; }
   .order-row .handle {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--surface-2);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     color: var(--text-muted);
-    font-size: 16px;
+    font-size: 15px;
     cursor: grab;
     flex-shrink: 0;
   }
   .order-row .handle:active { cursor: grabbing; background: var(--amber-glow); color: var(--amber); }
-  .order-row .idx { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text-muted); width: 24px; font-weight: 700; }
-  .order-row .num { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; flex: 1; }
-  .order-row-quick-btns { display: flex; gap: 4px; }
+  .order-row .idx { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-muted); width: 22px; font-weight: 700; }
+  .order-row .num { font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700; flex: 1; }
+  .order-row-quick-btns { display: flex; gap: 3px; }
   .order-step-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 5px;
     border: 1px solid var(--line);
     background: var(--surface-2);
     color: var(--text-muted);
@@ -888,31 +910,19 @@
   .order-row.selected .num, .order-row.selected .idx { color: var(--amber); }
 
   /* ===== KELOLA RUTE CARD & ROW ===== */
-  .route-save-row { display: flex; gap: 8px; margin-bottom: 8px; }
-  .route-save-row input { flex: 1; }
-  .route-save-row button {
-    flex-shrink: 0;
-    padding: 0 16px;
-    border: none;
-    border-radius: 9px;
-    background: var(--amber);
-    color: #1A1300;
-    font-weight: 800;
-    font-family: 'Space Mono', monospace;
-    font-size: 12.5px;
-    cursor: pointer;
-  }
+  .route-save-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .route-save-row input { flex: 1; height: 38px; }
   .route-manage-card {
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    padding: 13px 14px;
-    margin-bottom: 10px;
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
     background: var(--surface-2);
   }
-  .rmc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .rmc-name { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 14.5px; color: var(--text); display: flex; align-items: center; gap: 8px; }
-  .rmc-details { font-size: 11.5px; color: var(--text-muted); font-family: 'Space Mono', monospace; line-height: 1.5; }
-  .rmc-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .rmc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .rmc-name { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13.5px; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .rmc-details { font-size: 10.5px; color: var(--text-muted); font-family: 'Space Mono', monospace; line-height: 1.4; }
+  .rmc-actions { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
 
   /* ===== MOBILE BOTTOM NAVIGATION BAR ===== */
   .bottom-nav {
@@ -921,36 +931,37 @@
     left: 0;
     right: 0;
     z-index: 80;
-    background: rgba(12, 16, 23, 0.95);
+    background: rgba(12, 16, 23, 0.96);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid var(--line);
-    padding: 6px 10px calc(6px + var(--safe-bottom));
+    padding: 4px 6px calc(4px + var(--safe-bottom));
     display: flex;
     justify-content: space-around;
     align-items: center;
+    height: calc(50px + var(--safe-bottom));
   }
   .bnav-btn {
     flex: 1;
-    max-width: 90px;
+    max-width: 80px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 2px;
     background: transparent;
     border: none;
     color: var(--text-muted);
-    padding: 6px 4px;
-    border-radius: 9px;
+    padding: 4px 2px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all .15s ease;
+    transition: all .12s ease;
     user-select: none;
   }
   .bnav-btn:active { transform: scale(0.92); }
   .bnav-btn.active { color: var(--amber); }
-  .bnav-icon-wrap { position: relative; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
-  .bnav-text { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+  .bnav-icon-wrap { position: relative; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; }
+  .bnav-text { font-family: 'Space Mono', monospace; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
   .bnav-dot {
     position: absolute;
     top: -1px;
@@ -965,20 +976,20 @@
   .bnav-badge {
     position: absolute;
     top: -5px;
-    right: -10px;
+    right: -9px;
     background: var(--surface-3);
     border: 1px solid var(--line);
     color: var(--text);
-    font-size: 9px;
+    font-size: 8.5px;
     font-family: 'Space Mono', monospace;
     font-weight: 700;
-    padding: 1px 4px;
+    padding: 1px 3px;
     border-radius: 999px;
-    min-width: 14px;
+    min-width: 13px;
     text-align: center;
   }
 
-  /* ===== FULL-SCREEN PAPAN DISPLAY & MONITOR (FIXED HORIZONTAL DIGIT WRAP) ===== */
+  /* ===== FULL-SCREEN PAPAN DISPLAY & MONITOR ===== */
   .papan-overlay {
     position: fixed;
     inset: 0;
@@ -994,29 +1005,28 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: clamp(10px, 1.6vh, 16px) clamp(14px, 3vw, 32px);
+    gap: 8px;
+    padding: clamp(8px, 1.5vh, 14px) clamp(12px, 2.5vw, 24px);
     background: var(--surface-2);
     border-bottom: 2px solid var(--line);
     flex-shrink: 0;
-    transition: background-color .25s ease, border-color .25s ease;
   }
-  .pcb-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .pcb-icon { font-size: clamp(16px, 2vw, 22px); line-height: 1; flex-shrink: 0; }
+  .pcb-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .pcb-icon { font-size: clamp(15px, 2vw, 20px); line-height: 1; flex-shrink: 0; }
   .pcb-unit {
     font-family: 'Space Mono', monospace;
     font-weight: 800;
-    font-size: clamp(15px, 2vw, 22px);
+    font-size: clamp(14px, 2vw, 20px);
     color: var(--text);
     white-space: nowrap !important;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .pcb-right { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+  .pcb-right { display: flex; align-items: baseline; gap: 6px; flex-shrink: 0; }
   .pcb-label {
     font-family: 'Space Mono', monospace;
-    font-size: clamp(10px, 1.1vw, 13px);
-    letter-spacing: 0.12em;
+    font-size: clamp(9px, 1vw, 12px);
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-muted);
     font-weight: 700;
@@ -1024,7 +1034,7 @@
   .pcb-time {
     font-family: 'Space Mono', monospace;
     font-weight: 800;
-    font-size: clamp(24px, 4.5vw, 54px);
+    font-size: clamp(22px, 4.2vw, 48px);
     color: var(--amber);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
@@ -1032,162 +1042,146 @@
     white-space: nowrap !important;
   }
 
-  /* Countdown Warning States */
   .papan-countdown-bar.yellow-alert {
     background: rgba(217, 119, 6, 0.4);
     border-bottom-color: #F59E0B;
-    animation: papanYellowBgPulse 2.2s infinite ease-in-out;
   }
   .papan-countdown-bar.yellow-alert .pcb-time,
   .papan-countdown-bar.yellow-alert .pcb-unit,
   .papan-countdown-bar.yellow-alert .pcb-label { color: #FFF !important; }
-  @keyframes papanYellowBgPulse { 0%, 100% { background: rgba(190, 100, 0, 0.35); } 50% { background: rgba(245, 158, 11, 0.75); } }
 
   .papan-countdown-bar.warning {
     background: rgba(220, 38, 38, 0.65);
     border-bottom-color: #EF4444;
-    animation: papanWarningBg 1s steps(2, jump-none) infinite;
   }
   .papan-countdown-bar.warning .pcb-time,
   .papan-countdown-bar.warning .pcb-unit,
-  .papan-countdown-bar.warning .pcb-label { color: #FFF !important; text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
-  @keyframes papanWarningBg { 0%, 100% { background: rgba(185, 28, 28, 0.55); } 50% { background: rgba(239, 68, 68, 0.95); } }
+  .papan-countdown-bar.warning .pcb-label { color: #FFF !important; }
 
-  /* Papan Topbar */
   .papan-topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: clamp(10px, 1.6vh, 18px) clamp(14px, 3vw, 36px);
+    gap: 8px;
+    padding: clamp(8px, 1.4vh, 14px) clamp(12px, 2.5vw, 24px);
     border-bottom: 1px solid var(--line);
     background: var(--surface);
     flex-shrink: 0;
   }
   .papan-route {
     font-family: 'Space Mono', monospace;
-    font-size: clamp(13px, 1.6vw, 20px);
+    font-size: clamp(12px, 1.5vw, 18px);
     color: var(--amber);
     font-weight: 800;
-    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-  .papan-date { font-size: clamp(11px, 1.1vw, 14px); color: var(--text-muted); margin-top: 3px; text-transform: capitalize; }
-  .papan-topbar-right { display: flex; align-items: center; gap: 10px; }
+  .papan-date { font-size: clamp(10px, 1vw, 13px); color: var(--text-muted); margin-top: 2px; }
+  .papan-topbar-right { display: flex; align-items: center; gap: 8px; }
   .papan-clock {
     font-family: 'Space Mono', monospace;
-    font-size: clamp(22px, 5.2vw, 64px);
+    font-size: clamp(18px, 4.5vw, 54px);
     font-weight: 800;
     color: var(--amber);
-    letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
     line-height: 1;
     white-space: nowrap !important;
   }
-  .papan-mode-selector { display: flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+  .papan-mode-selector { display: flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 2px; }
   .pms-btn {
-    padding: 5px 8px;
+    padding: 4px 7px;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     background: transparent;
     color: var(--text-muted);
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
   }
   .pms-btn.active { background: var(--amber); color: #1A1300; }
   .papan-exit {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--line);
     background: var(--surface-2);
     color: var(--text);
-    font-size: 18px;
+    font-size: 16px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
   }
-  .papan-exit:active { background: var(--danger); color: #FFF; transform: scale(0.93); }
+  .papan-exit:active { background: var(--danger); color: #FFF; }
 
-  /* Papan Board Rows (Single Route & Combined Mode) */
   .papan-board-wrap {
     flex: 1;
     overflow-y: auto;
-    padding: 0 clamp(10px, 2.5vw, 36px) 24px;
+    padding: 0 clamp(8px, 2vw, 24px) 20px;
     scrollbar-width: none;
   }
   .papan-board-wrap::-webkit-scrollbar { display: none; }
 
-  /* Single Route Grid Layout */
   .papan-head-row {
     display: grid;
-    grid-template-columns: 44px 38px 1fr auto;
+    grid-template-columns: 38px 34px 1fr auto;
     align-items: center;
-    padding: 10px 14px;
+    padding: 8px 10px;
     position: sticky;
     top: 0;
     background: var(--bg);
     border-bottom: 2px solid var(--line);
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.12em;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-muted);
     font-weight: 700;
     z-index: 2;
-    column-gap: 8px;
+    column-gap: 6px;
   }
   .papan-ritase-divider {
-    padding: 8px 14px;
+    padding: 7px 10px;
     background: var(--surface-2);
     border-bottom: 1px solid var(--line);
     font-family: 'Space Mono', monospace;
-    font-size: 11.5px;
-    letter-spacing: 0.14em;
+    font-size: 11px;
+    letter-spacing: 0.1em;
     color: var(--amber);
     font-weight: 800;
   }
   .papan-row {
     display: grid;
-    grid-template-columns: 44px 38px 1fr auto;
+    grid-template-columns: 38px 34px 1fr auto;
     align-items: center;
-    padding: clamp(10px, 1.8vh, 18px) 14px;
+    padding: clamp(8px, 1.5vh, 14px) 10px;
     border-bottom: 1px solid var(--line);
     font-family: 'Space Mono', monospace;
-    transition: background .2s ease, opacity .2s ease;
-    column-gap: 8px;
+    column-gap: 6px;
   }
-
-  /* Combined Monitor Mode Layout */
   .papan-overlay.combined-mode .papan-head-row,
   .papan-overlay.combined-mode .papan-row {
-    grid-template-columns: 82px 36px 1fr auto;
+    grid-template-columns: 74px 32px 1fr auto;
   }
-
-  .papan-row .no, .papan-row .rit { color: var(--text-muted); font-size: clamp(13px, 1.4vw, 18px); white-space: nowrap !important; }
+  .papan-row .no, .papan-row .rit { color: var(--text-muted); font-size: clamp(12px, 1.3vw, 16px); white-space: nowrap !important; }
   .papan-row .unit {
     font-weight: 800;
-    font-size: clamp(19px, 5.2vw, 36px);
+    font-size: clamp(17px, 4.8vw, 32px);
     color: var(--text);
-    letter-spacing: 0.02em;
     white-space: nowrap !important;
     display: flex;
     align-items: baseline;
-    gap: 6px;
+    gap: 5px;
     min-width: 0;
     overflow: hidden;
   }
   .papan-row .unit-num { white-space: nowrap !important; font-variant-numeric: tabular-nums; }
   .papan-row.peak .unit-num { color: var(--amber); }
-
   .papan-row .jam {
     font-weight: 800;
-    font-size: clamp(21px, 5.5vw, 42px);
+    font-size: clamp(18px, 5vw, 38px);
     color: var(--amber);
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -1196,43 +1190,41 @@
     flex-direction: column;
     align-items: flex-end;
     line-height: 1.1;
-    min-width: 0;
   }
   .papan-next-badge {
     display: none;
     font-family: 'Inter', sans-serif;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
     letter-spacing: 0.04em;
     background: var(--amber);
     color: #1A1300;
-    padding: 2px 7px;
-    border-radius: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
     text-transform: uppercase;
     white-space: nowrap;
-    margin-top: 3px;
+    margin-top: 2px;
   }
   .papan-row.next-up {
     background: var(--amber-glow);
     border-bottom-color: var(--amber-dim);
-    box-shadow: inset 6px 0 0 var(--amber);
+    box-shadow: inset 4px 0 0 var(--amber);
   }
   .papan-row.next-up .papan-next-badge { display: inline-block; }
   .papan-row.done { opacity: 0.32; }
 
   .papan-route-tag {
     display: inline-block;
-    padding: 3px 6px;
-    border-radius: 6px;
-    font-size: 11px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 10px;
     font-family: 'Space Mono', monospace;
     font-weight: 800;
-    letter-spacing: 0.03em;
     white-space: nowrap !important;
     text-align: center;
   }
 
-  /* ===== ALARM OVERLAY (EMERGENCY DISPATCH POPUP) ===== */
+  /* ===== ALARM OVERLAY ===== */
   .alarm-overlay {
     position: fixed;
     inset: 0;
@@ -1240,71 +1232,61 @@
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    background: rgba(10, 8, 4, 0.94);
-    animation: alarmBgPulse 1.6s ease-in-out infinite;
+    padding: 16px;
+    background: rgba(10, 8, 4, 0.95);
   }
   .alarm-overlay.show { display: flex; }
-  @keyframes alarmBgPulse { 0%, 100% { background: rgba(10, 8, 4, 0.94); } 50% { background: rgba(120, 52, 10, 0.88); } }
   .alarm-card {
     width: 100%;
-    max-width: 440px;
-    background: linear-gradient(180deg, var(--surface), var(--surface-2));
-    border: 3px solid var(--amber);
-    border-radius: 20px;
-    padding: clamp(22px, 6vw, 36px);
+    max-width: 380px;
+    background: var(--surface);
+    border: 2px solid var(--amber);
+    border-radius: var(--radius-lg);
+    padding: 20px 16px;
     text-align: center;
-    box-shadow: 0 0 40px rgba(245, 158, 11, 0.45);
+    box-shadow: 0 0 35px rgba(245, 158, 11, 0.4);
   }
   .alarm-label {
     font-family: 'Space Mono', monospace;
-    font-size: 13px;
-    letter-spacing: 0.2em;
+    font-size: 12px;
+    letter-spacing: 0.15em;
     color: var(--amber);
     text-transform: uppercase;
     font-weight: 800;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
-  .alarm-units { width: 100%; max-height: 48vh; overflow-y: auto; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .alarm-units { width: 100%; max-height: 45vh; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
   .alarm-unit-row {
     background: rgba(245, 158, 11, 0.08);
     border: 1px solid var(--amber-dim);
-    border-radius: 12px;
-    padding: 11px 14px;
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
   }
-  .alarm-unit-row .au-jam { font-family: 'Space Mono', monospace; font-weight: 800; font-size: 19px; color: var(--amber); }
-  .alarm-unit-row .au-unit { font-family: 'Space Mono', monospace; font-weight: 800; font-size: 17px; color: var(--text); }
-  .alarm-unit-row .au-meta { font-size: 11px; color: var(--text-muted); }
+  .alarm-unit-row .au-jam { font-family: 'Space Mono', monospace; font-weight: 800; font-size: 17px; color: var(--amber); }
+  .alarm-unit-row .au-unit { font-family: 'Space Mono', monospace; font-weight: 800; font-size: 15px; color: var(--text); }
+  .alarm-unit-row .au-meta { font-size: 10.5px; color: var(--text-muted); }
   .alarm-ok-btn {
     width: 100%;
-    padding: 16px;
+    padding: 14px;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
     background: var(--amber);
     color: #1A1300;
     font-family: 'Space Mono', monospace;
     font-weight: 800;
-    font-size: 15px;
-    letter-spacing: 0.06em;
+    font-size: 13.5px;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     cursor: pointer;
   }
   .alarm-ok-btn:active { transform: scale(0.97); }
 
-  /* ===== ACCESSIBILITY & REDUCED MOTION ===== */
   @media (prefers-reduced-motion: reduce) {
-    *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
-  }
-
-  /* Desktop/Tablet adjustments */
-  @media (min-width: 641px) {
-    .app-header { padding: 12px 24px; }
-    .bottom-nav { max-width: 520px; left: 50%; transform: translateX(-50%); border-radius: 16px; bottom: 12px; border: 1px solid var(--line); }
-    main { padding: 16px 20px; }
+    *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
 </style>
 </head>
@@ -1314,19 +1296,12 @@
 <header class="app-header">
   <div class="header-left">
     <div class="brand-icon">M</div>
-    <div class="header-titles">
-      <div class="brand-sub">
-        <span class="live-dot"></span>
-        <span>DISPATCH MIKROTRANS</span>
-      </div>
-      <h1 class="brand-title">JADWAL<span>.</span>BERANGKAT</h1>
-    </div>
+    <h1 class="brand-title">JADWAL<span>.</span>BERANGKAT</h1>
   </div>
   <div class="header-right">
     <div class="live-clock" id="headerLiveClock">--:--:--</div>
-    <button type="button" class="quick-monitor-btn" id="headerMonitorBtn" title="Buka Papan Display / Monitor">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
-      <span>Monitor</span>
+    <button type="button" class="quick-monitor-btn" id="headerMonitorBtn" data-tooltip="Papan Display / Monitor" aria-label="Buka Papan Display">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
     </button>
   </div>
 </header>
@@ -1335,26 +1310,18 @@
 
   <!-- ============ HORIZONTAL ROUTE SELECTOR CAROUSEL ============ -->
   <div class="route-nav-section" id="routeNavSection">
-    <div class="route-nav-header">
-      <div class="rnh-title">
-        <span>RUTE AKTIF</span>
-      </div>
-      <div class="rnh-actions">
-        <button type="button" class="btn-mini amber" id="addRouteTopBtn">+ Tambah Rute</button>
-      </div>
-    </div>
-    <div class="route-tabs-container" id="routeTabsContainer">
+    <div class="route-nav-top-row" id="routeTabsContainer">
       <!-- dynamic route pills generated by app.js -->
     </div>
     <div class="active-route-strip" id="activeRouteStrip">
       <div class="ars-left">
         <span class="ars-name-badge" id="arsBadge"><span class="rtp-color" id="arsColorDot"></span><span id="arsNameText">JAK.115</span></span>
-        <span class="ars-meta" id="arsMetaText">05:00 - 22:00 &middot; 8 Rit &middot; 39 Unit</span>
+        <span class="ars-meta" id="arsMetaText">05:00-22:00 &middot; 8 Rit &middot; 39u</span>
       </div>
       <div class="ars-right">
-        <button type="button" class="ars-action-btn" id="renameRouteBtn" title="Ganti nama rute">&#9998; Ubah</button>
-        <button type="button" class="ars-action-btn" id="dupRouteBtn" title="Duplikasi rute">&#10697; Duplikasi</button>
-        <button type="button" class="ars-action-btn danger" id="delRouteBtn" title="Hapus rute">&#128465;</button>
+        <button type="button" class="icon-btn" id="renameRouteBtn" data-tooltip="Ubah nama rute" aria-label="Ubah nama rute">&#9998;</button>
+        <button type="button" class="icon-btn" id="dupRouteBtn" data-tooltip="Duplikasi rute" aria-label="Duplikasi rute">&#10697;</button>
+        <button type="button" class="icon-btn danger" id="delRouteBtn" data-tooltip="Hapus rute" aria-label="Hapus rute">&#128465;</button>
       </div>
     </div>
   </div>
@@ -1371,20 +1338,26 @@
   <div class="panel active" id="panelJadwal">
 
     <div class="card">
-      <h2>Jam Operasional &amp; Ritase</h2>
+      <h2>
+        <span>Jam Operasional &amp; Ritase</span>
+        <button type="button" class="tip-btn" data-tip="Atur rentang jam dinas dan target putaran armada per hari." aria-label="Info Jam Operasional">ⓘ</button>
+      </h2>
       <div class="row">
         <div class="field">
-          <label for="jamMulai">Jam mulai</label>
+          <label for="jamMulai">Mulai</label>
           <input type="time" id="jamMulai" value="05:00">
         </div>
         <div class="field">
-          <label for="jamSelesai">Jam selesai</label>
+          <label for="jamSelesai">Selesai</label>
           <input type="time" id="jamSelesai" value="22:00">
         </div>
       </div>
 
       <div class="field">
-        <label for="ritase">Jumlah ritase (putaran target)</label>
+        <label for="ritase">
+          <span>Target Ritase</span>
+          <button type="button" class="tip-btn" data-tip="Jumlah putaran ritase yang harus diselesaikan tiap armada aktif." aria-label="Info Target Ritase">ⓘ</button>
+        </label>
         <div class="stepper">
           <button type="button" id="ritaseMinus" aria-label="Kurangi ritase">&minus;</button>
           <input type="number" inputmode="numeric" id="ritase" value="8" min="1" max="30">
@@ -1393,103 +1366,109 @@
       </div>
 
       <div class="field">
-        <label>Pola interval headway per zona waktu</label>
+        <label>
+          <span>Pola Headway</span>
+          <button type="button" class="tip-btn" data-tip="Urutan blok interval di tiap zona: misal 3 mnt lalu 4 mnt, atau sebaliknya." aria-label="Info Pola Headway">ⓘ</button>
+        </label>
         <div class="order-toggle">
           <button type="button" id="orderFastFirst" class="active">Cepat &rarr; Lambat</button>
           <button type="button" id="orderSlowFirst">Lambat &rarr; Cepat</button>
         </div>
-        <p class="hint">Menentukan urutan blok interval di setiap zona (misal 3 menit lalu 4 menit, atau sebaliknya).</p>
       </div>
 
       <!-- Quick fleet status badge -->
-      <div style="background:var(--surface-2); padding:10px 12px; margin-bottom:10px; border-radius:9px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
-        <span class="mono" id="activeSummaryText" style="color:var(--amber); font-weight:700; font-size:12.5px;">0 / 0 unit aktif</span>
-        <a id="goToUnitTab" style="color:var(--sky); font-size:12px; font-weight:700; cursor:pointer; text-decoration:none;">Kelola Armada &rarr;</a>
+      <div style="background:var(--surface-2); padding:8px 10px; margin-bottom:8px; border-radius:6px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
+        <span class="mono" id="activeSummaryText" style="color:var(--amber); font-weight:700; font-size:11.5px;">0 / 0 unit aktif</span>
+        <a id="goToUnitTab" style="color:var(--sky); font-size:11px; font-weight:700; cursor:pointer; text-decoration:none;">Kelola &rarr;</a>
       </div>
 
       <details class="advanced">
-        <summary><span class="summary-label">Pengaturan Jam Sibuk (Peak Hour)</span></summary>
+        <summary>
+          <span class="summary-label">Jam Sibuk (Peak Hour)</span>
+          <button type="button" class="tip-btn" data-tip="Headway jam sibuk dipatok tetap sesuai menit ini. Sisa waktu di luar jam sibuk dibagi otomatis." aria-label="Info Jam Sibuk">ⓘ</button>
+        </summary>
         <div class="peak-toggle-row">
-          <span>Aktifkan perhitungan jam sibuk</span>
+          <span>Aktifkan jam sibuk</span>
           <div class="switch" id="peakToggle"><div class="knob"></div></div>
         </div>
         <div class="advanced-body">
           <div class="peak-block">
-            <div class="peak-block-title">JAM SIBUK PAGI</div>
+            <div class="peak-block-title">SIBUK PAGI</div>
             <div class="row">
               <div class="field"><label>Mulai</label><input type="time" id="peak1Start" value="05:00"></div>
               <div class="field"><label>Selesai</label><input type="time" id="peak1End" value="08:00"></div>
             </div>
             <div class="field" style="margin-bottom:0;">
-              <label for="peak1Interval">Interval Headway Tetap (menit)</label>
+              <label for="peak1Interval">Headway (menit)</label>
               <input type="number" inputmode="numeric" id="peak1Interval" value="2" min="1" max="60" step="1">
             </div>
           </div>
           <div class="peak-block">
-            <div class="peak-block-title">JAM SIBUK SORE</div>
+            <div class="peak-block-title">SIBUK SORE</div>
             <div class="row">
               <div class="field"><label>Mulai</label><input type="time" id="peak2Start" value="17:00"></div>
               <div class="field"><label>Selesai</label><input type="time" id="peak2End" value="19:00"></div>
             </div>
             <div class="field" style="margin-bottom:0;">
-              <label for="peak2Interval">Interval Headway Tetap (menit)</label>
+              <label for="peak2Interval">Headway (menit)</label>
               <input type="number" inputmode="numeric" id="peak2Interval" value="3" min="1" max="60" step="1">
             </div>
           </div>
-          <p class="hint" style="margin-top:8px;">Interval headway di jam sibuk dipakai persis sesuai angka ini. Sisa waktu di luar jam sibuk dihitung otomatis agar total keberangkatan pas sampai jam selesai.</p>
         </div>
       </details>
     </div>
 
     <div class="card">
-      <h2>Alarm Keberangkatan</h2>
-      <div class="peak-toggle-row" style="padding:0 0 10px;">
-        <span>Alarm otomatis tepat jam berangkat</span>
+      <h2>
+        <span>Alarm Otomatis</span>
+        <button type="button" class="tip-btn" data-tip="Alarm bersuara tepat jam keberangkatan & berhenti sendiri sesuai durasi ini atau ditekan OK." aria-label="Info Alarm">ⓘ</button>
+      </h2>
+      <div class="peak-toggle-row" style="padding:0 0 8px;">
+        <span>Bunyikan saat berangkat</span>
         <div class="switch" id="alarmToggle"><div class="knob"></div></div>
       </div>
       <div class="field" style="margin-bottom:0;">
-        <label for="alarmDuration">Durasi bunyi alarm (detik)</label>
+        <label for="alarmDuration">Durasi bunyi (detik)</label>
         <div class="stepper">
           <button type="button" id="alarmDurMinus" aria-label="Kurangi durasi">&minus;</button>
           <input type="number" inputmode="numeric" id="alarmDuration" value="8" min="1" max="30">
           <button type="button" id="alarmDurPlus" aria-label="Tambah durasi">+</button>
         </div>
-        <p class="hint">Alarm berbunyi dan memicu layar penuh tepat saat jam keberangkatan tiba &mdash; berhenti sendiri setelah durasi ini, atau langsung begitu tombol OK ditekan.</p>
       </div>
     </div>
 
     <div class="dirty-banner" id="dirtyBanner">
-      <p>Ada perubahan unit aktif atau urutan setelah jadwal dibuat. Histori keberangkatan yang sudah lewat tetap aman.</p>
-      <button type="button" id="recalcBtn">&#8635; Hitung Ulang Sisa Jadwal</button>
+      <span class="dirty-banner-text">&#9888; Unit/urutan berubah</span>
+      <button type="button" id="recalcBtn">&#8635; Hitung Ulang</button>
     </div>
 
     <div class="error-box" id="errorBox"></div>
 
     <div class="generate-group">
-      <button type="button" class="generate-btn-main" id="generateBtn">Buat Jadwal (Rute Ini)</button>
-      <button type="button" class="generate-btn-all" id="generateAllBtn" title="Hitung jadwal untuk semua rute sekaligus">&#9889; Buat Semua Rute</button>
+      <button type="button" class="generate-btn-main" id="generateBtn">Buat Jadwal</button>
+      <button type="button" class="generate-btn-all" id="generateAllBtn" data-tooltip="Hitung semua rute sekaligus">&#9889; Semua Rute</button>
     </div>
 
     <div id="resultSection">
       <div class="summary">
-        <div class="stat"><div class="n" id="statTotal">&mdash;</div><div class="l">Total berangkat</div></div>
+        <div class="stat"><div class="n" id="statTotal">&mdash;</div><div class="l">Berangkat</div></div>
         <div class="stat"><div class="n" id="statDurasi">&mdash;</div><div class="l">Durasi</div></div>
-        <div class="stat"><div class="n" id="statUnit">&mdash;</div><div class="l">Unit Aktif</div></div>
+        <div class="stat"><div class="n" id="statUnit">&mdash;</div><div class="l">Armada</div></div>
       </div>
       <div class="pattern-note" id="patternNote"></div>
       <div class="action-row">
-        <button type="button" class="ghost-btn" id="copyBtn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          <span>Salin Teks (WA)</span>
+        <button type="button" class="ghost-btn" id="copyBtn" data-tooltip="Salin teks rapi untuk dikirim ke grup WhatsApp">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span>Salin (WA)</span>
         </button>
-        <button type="button" class="ghost-btn" id="exportMenuBtn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <button type="button" class="ghost-btn" id="exportMenuBtn" data-tooltip="Export Excel, PDF, TXT, Gambar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span>Export &#9662;</span>
         </button>
       </div>
       <div class="papan-actions-group">
-        <button type="button" class="papan-btn" id="openPapanBtn">&#128250; Papan Display (Rute Ini)</button>
-        <button type="button" class="papan-btn papan-btn-combined" id="openPapanCombinedBtn">&#127760; Monitor Semua Rute</button>
+        <button type="button" class="papan-btn" id="openPapanBtn">&#128250; Papan Rute Ini</button>
+        <button type="button" class="papan-btn papan-btn-combined" id="openPapanCombinedBtn">&#127760; Monitor Semua</button>
       </div>
       <div class="board">
         <div class="board-head"><span>No</span><span>Rit</span><span>Unit</span><span style="text-align:right;">Jam</span></div>
@@ -1501,17 +1480,16 @@
   <!-- ============ PANEL 2: DAFTAR UNIT (ARMADA RUTE AKTIF) ============ -->
   <div class="panel" id="panelUnit">
     <div class="card">
-      <h2 id="unitCardTitle">Unit Armada: Rute Aktif</h2>
+      <h2 id="unitCardTitle">Armada Rute Aktif</h2>
       <div class="add-unit-row">
         <input type="text" inputmode="numeric" pattern="[0-9]*" id="newUnitInput" placeholder="Nomor unit baru, misal: 222165">
-        <button type="button" id="addUnitBtn">+ Tambah</button>
+        <button type="button" id="addUnitBtn" class="icon-btn-accent" data-tooltip="Tambah unit ke rute ini" aria-label="Tambah unit">+</button>
       </div>
-      <p class="hint" style="margin-top:-4px; margin-bottom:10px;">Unit akan otomatis dimasukkan ke putaran keberangkatan rute aktif saat ini.</p>
       
       <!-- Quick Unit Search Field -->
       <div class="unit-search-wrap">
-        <svg class="unit-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="unitSearchInput" class="unit-search-input" placeholder="Cari nomor unit armada..." autocomplete="off">
+        <svg class="unit-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="unitSearchInput" class="unit-search-input" placeholder="Cari nomor armada..." autocomplete="off">
       </div>
 
       <!-- Toolbar filter & select-all -->
@@ -1519,19 +1497,19 @@
         <div class="unit-filter-pills">
           <button type="button" class="uf-pill active" id="filterUnitsAll">Semua</button>
           <button type="button" class="uf-pill" id="filterUnitsActive">Aktif</button>
-          <button type="button" class="uf-pill" id="filterUnitsInactive">Nonaktif</button>
+          <button type="button" class="uf-pill" id="filterUnitsInactive">Off</button>
         </div>
-        <button type="button" class="unit-select-all-btn" id="selectAllUnitsBtn">&#9745; Pilih Semua</button>
+        <button type="button" class="icon-btn" id="selectAllUnitsBtn" data-tooltip="Pilih semua unit" aria-label="Pilih semua unit">&#9745;</button>
       </div>
 
-      <!-- Bulk Actions Bar (Sticky & Muncul saat unit dipilih di atas bottom nav) -->
+      <!-- Floating Bottom Bulk Actions Bar -->
       <div class="bulk-units-bar" id="bulkUnitsBar" style="display:none;">
         <span class="bub-count" id="bulkCountText">0 dipilih</span>
         <div class="bub-actions">
-          <button type="button" class="bub-btn activate" id="bulkActivateBtn">&#10003; Aktifkan</button>
-          <button type="button" class="bub-btn deactivate" id="bulkDeactivateBtn">&#8856; Nonaktifkan</button>
-          <button type="button" class="bub-btn danger" id="bulkDeleteBtn">&#128465; Hapus</button>
-          <button type="button" class="bub-btn cancel" id="bulkCancelBtn" title="Batal Pilih">&#10005;</button>
+          <button type="button" class="bub-btn activate" id="bulkActivateBtn" data-tooltip="Aktifkan unit terpilih" aria-label="Aktifkan unit terpilih">&#10003;</button>
+          <button type="button" class="bub-btn deactivate" id="bulkDeactivateBtn" data-tooltip="Nonaktifkan unit terpilih" aria-label="Nonaktifkan unit terpilih">&#8856;</button>
+          <button type="button" class="bub-btn danger" id="bulkDeleteBtn" data-tooltip="Hapus unit terpilih" aria-label="Hapus unit terpilih">&#128465;</button>
+          <button type="button" class="bub-btn cancel" id="bulkCancelBtn" data-tooltip="Batal seleksi" aria-label="Batal seleksi">&#10005;</button>
         </div>
       </div>
     </div>
@@ -1542,12 +1520,14 @@
   <!-- ============ PANEL 3: URUTAN KEBERANGKATAN ============ -->
   <div class="panel" id="panelOrder">
     <div class="card">
-      <h2>Urutan Keberangkatan</h2>
-      <p class="hint" style="margin-top:-6px;">Tahan &amp; geser (&#9776;) atau tekan tombol &uarr; / &darr; untuk mengatur urutan putaran armada rute aktif. Untuk pindah banyak sekaligus: tap unit-unit lalu geser salah satunya.</p>
-      <div class="card" id="multiSelectBar" style="display:none; background:var(--surface-2); padding:10px 12px; margin-bottom:10px; border-radius:8px;">
+      <h2>
+        <span>Urutan Putaran Armada</span>
+        <button type="button" class="tip-btn" data-tip="Geser (☰) atau tap &uarr;/&darr; untuk menukar giliran keberangkatan armada aktif." aria-label="Info Urutan Putaran">ⓘ</button>
+      </h2>
+      <div class="card" id="multiSelectBar" style="display:none; background:var(--surface-2); padding:8px 10px; margin-bottom:8px; border-radius:6px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span class="mono" id="multiSelectCount" style="color:var(--amber); font-weight:700; font-size:12px;">0 unit dipilih</span>
-          <a id="clearSelectionBtn" style="color:var(--sky); font-size:11.5px; font-weight:700; cursor:pointer;">Batal pilih</a>
+          <span class="mono" id="multiSelectCount" style="color:var(--amber); font-weight:700; font-size:11.5px;">0 unit dipilih</span>
+          <a id="clearSelectionBtn" style="color:var(--sky); font-size:11px; font-weight:700; cursor:pointer;">Batal</a>
         </div>
       </div>
     </div>
@@ -1557,16 +1537,18 @@
   <!-- ============ PANEL 4: KELOLA SEMUA RUTE ============ -->
   <div class="panel" id="panelRoute">
     <div class="card">
-      <h2>Tambah Rute Baru</h2>
+      <h2>
+        <span>Tambah Rute Baru</span>
+        <button type="button" class="tip-btn" data-tip="Tiap rute memiliki data armada, urutan, dan parameter operasional mandiri." aria-label="Info Tambah Rute">ⓘ</button>
+      </h2>
       <div class="route-save-row">
         <input type="text" id="newRouteNameInput" placeholder="Nama rute baru, contoh: JAK.88">
-        <button type="button" id="saveRouteBtn">+ Buat Rute</button>
+        <button type="button" id="saveRouteBtn" class="icon-btn-accent" data-tooltip="Buat rute baru" aria-label="Buat rute baru">+</button>
       </div>
-      <p class="hint" style="margin-top:2px;">Setiap rute memiliki konfigurasi jam mulai-selesai, jam sibuk, ritase, dan unitnya masing-masing.</p>
     </div>
 
     <div class="card">
-      <h2>Daftar Semua Rute Terdaftar</h2>
+      <h2>Daftar Semua Rute</h2>
       <div class="route-list" id="routeListContainer"></div>
     </div>
   </div>
@@ -1577,27 +1559,27 @@
 <nav class="bottom-nav" id="bottomNav" aria-label="Navigasi Bawah">
   <button type="button" class="bnav-btn active" id="bnavJadwal" data-tab="jadwal">
     <div class="bnav-icon-wrap">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       <span class="bnav-dot" id="bnavJadwalDot"></span>
     </div>
     <span class="bnav-text">Jadwal</span>
   </button>
   <button type="button" class="bnav-btn" id="bnavUnit" data-tab="unit">
     <div class="bnav-icon-wrap">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M4 11h16"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M4 11h16"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg>
       <span class="bnav-badge" id="bnavUnitBadge">0</span>
     </div>
     <span class="bnav-text">Armada</span>
   </button>
   <button type="button" class="bnav-btn" id="bnavOrder" data-tab="order">
     <div class="bnav-icon-wrap">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
     </div>
     <span class="bnav-text">Urutan</span>
   </button>
   <button type="button" class="bnav-btn" id="bnavRoute" data-tab="route">
     <div class="bnav-icon-wrap">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
       <span class="bnav-badge" id="bnavRouteBadge">0</span>
     </div>
     <span class="bnav-text">Rute</span>
@@ -1626,10 +1608,10 @@
     <div class="papan-topbar-right">
       <div class="papan-mode-selector" id="papanModeSelector">
         <button type="button" class="pms-btn active" id="pmsActiveBtn">Rute Ini</button>
-        <button type="button" class="pms-btn" id="pmsCombinedBtn">&#127760; Semua Rute</button>
+        <button type="button" class="pms-btn" id="pmsCombinedBtn">&#127760; Semua</button>
       </div>
       <div class="papan-clock" id="papanClock">--:--:--</div>
-      <button type="button" class="papan-exit" id="papanExitBtn" aria-label="Tutup Papan Display">&#10005;</button>
+      <button type="button" class="papan-exit" id="papanExitBtn" data-tooltip="Tutup Papan Display" aria-label="Tutup Papan Display">&#10005;</button>
     </div>
   </div>
 
