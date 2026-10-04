@@ -2437,14 +2437,125 @@
     if (alarmSoundTimer){ clearInterval(alarmSoundTimer); alarmSoundTimer = null; }
   }
 
+  const DIGIT_WORDS_ID = {
+    '0': 'kosong',
+    '1': 'satu',
+    '2': 'dua',
+    '3': 'tiga',
+    '4': 'empat',
+    '5': 'lima',
+    '6': 'enam',
+    '7': 'tujuh',
+    '8': 'delapan',
+    '9': 'sembilan'
+  };
+
+  const BELASAN_WORDS_ID = {
+    '11': 'sebelas',
+    '12': 'dua belas',
+    '13': 'tiga belas',
+    '14': 'empat belas',
+    '15': 'lima belas',
+    '16': 'enam belas',
+    '17': 'tujuh belas',
+    '18': 'delapan belas',
+    '19': 'sembilan belas'
+  };
+
+  const PULUHAN_WORDS_ID = {
+    '10': 'sepuluh',
+    '20': 'dua puluh',
+    '30': 'tiga puluh',
+    '40': 'empat puluh',
+    '50': 'lima puluh',
+    '60': 'enam puluh',
+    '70': 'tujuh puluh',
+    '80': 'delapan puluh',
+    '90': 'sembilan puluh'
+  };
+
+  function spellDigitsChunk(digits){
+    if (!digits) return '';
+    const len = digits.length;
+    if (len === 1){
+      return DIGIT_WORDS_ID[digits] || digits;
+    }
+    if (len === 2){
+      if (BELASAN_WORDS_ID[digits]) return BELASAN_WORDS_ID[digits];
+      if (PULUHAN_WORDS_ID[digits]) return PULUHAN_WORDS_ID[digits];
+      return (DIGIT_WORDS_ID[digits[0]] || digits[0]) + ' ' + (DIGIT_WORDS_ID[digits[1]] || digits[1]);
+    }
+    if (len === 3){
+      const last2 = digits.slice(1);
+      if (BELASAN_WORDS_ID[last2]){
+        return (DIGIT_WORDS_ID[digits[0]] || digits[0]) + ' ' + BELASAN_WORDS_ID[last2];
+      }
+      if (PULUHAN_WORDS_ID[last2]){
+        return (DIGIT_WORDS_ID[digits[0]] || digits[0]) + ' ' + PULUHAN_WORDS_ID[last2];
+      }
+      const first2 = digits.slice(0, 2);
+      if (BELASAN_WORDS_ID[first2]){
+        return BELASAN_WORDS_ID[first2] + ' ' + (DIGIT_WORDS_ID[digits[2]] || digits[2]);
+      }
+      return digits.split('').map(d => DIGIT_WORDS_ID[d] || d).join(' ');
+    }
+    if (len === 4){
+      const p1 = digits.slice(0, 2);
+      const p2 = digits.slice(2, 4);
+
+      let s1;
+      if (BELASAN_WORDS_ID[p1]){
+        s1 = BELASAN_WORDS_ID[p1];
+      } else {
+        s1 = (DIGIT_WORDS_ID[p1[0]] || p1[0]) + ' ' + (DIGIT_WORDS_ID[p1[1]] || p1[1]);
+      }
+
+      let s2;
+      if (BELASAN_WORDS_ID[p2]){
+        s2 = BELASAN_WORDS_ID[p2];
+      } else if (PULUHAN_WORDS_ID[p2]){
+        s2 = PULUHAN_WORDS_ID[p2];
+      } else {
+        s2 = (DIGIT_WORDS_ID[p2[0]] || p2[0]) + ' ' + (DIGIT_WORDS_ID[p2[1]] || p2[1]);
+      }
+
+      return s1 + ' ' + s2;
+    }
+
+    const last2 = digits.slice(-2);
+    const leading = digits.slice(0, -2);
+    const sLead = leading.split('').map(d => DIGIT_WORDS_ID[d] || d).join(' ');
+    let sLast2;
+    if (BELASAN_WORDS_ID[last2]){
+      sLast2 = BELASAN_WORDS_ID[last2];
+    } else if (PULUHAN_WORDS_ID[last2]){
+      sLast2 = PULUHAN_WORDS_ID[last2];
+    } else {
+      sLast2 = (DIGIT_WORDS_ID[last2[0]] || last2[0]) + ' ' + (DIGIT_WORDS_ID[last2[1]] || last2[1]);
+    }
+    return (sLead + ' ' + sLast2).trim();
+  }
+
+  function spellOutUnitNumber(str){
+    if (!str) return '';
+    return String(str)
+      .replace(/\d+/g, match => spellDigitsChunk(match))
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function announceSpeech(rows){
     if (!('speechSynthesis' in window)) return;
     try{
       window.speechSynthesis.cancel();
-      const parts = rows.map(r => 'Rute ' + r.routeName + ', Unit ' + r.unit + ', saatnya berangkat.').join(' ');
+      const parts = rows.map(r => {
+        const routeNameClean = String(r.routeName || '').replace(/\./g, ' ');
+        const unitDigits = spellOutUnitNumber(r.unit);
+        return 'Rute ' + routeNameClean + ', Unit ' + unitDigits + ', saatnya berangkat.';
+      }).join(' ');
       const utterance = new SpeechSynthesisUtterance(parts);
       utterance.lang = 'id-ID';
-      utterance.rate = 1.05;
+      utterance.rate = 1.0;
       window.speechSynthesis.speak(utterance);
     }catch(e){}
   }
