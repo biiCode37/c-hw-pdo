@@ -2790,6 +2790,19 @@
   if (exportMenuBtn) exportMenuBtn.addEventListener('click', openExportMenu);
 
   // ===== INITIALIZATION =====
+  function updateHeaderHeight(){
+    const header = document.querySelector('.app-header');
+    if (header){
+      const h = header.getBoundingClientRect().height;
+      if (h > 0){
+        document.documentElement.style.setProperty('--app-header-h', Math.round(h) + 'px');
+      }
+    }
+  }
+  window.addEventListener('resize', updateHeaderHeight, { passive: true });
+  window.addEventListener('orientationchange', updateHeaderHeight, { passive: true });
+  updateHeaderHeight();
+
   renderRouteBar();
   hydrateInputs();
   renderUnitList();
