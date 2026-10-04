@@ -71,6 +71,7 @@
       peak2Interval: 3,
       alarmEnabled: true,
       alarmDuration: 8,
+      alarmPrepSeconds: cleanOverrides.alarmPrepSeconds !== undefined ? Number(cleanOverrides.alarmPrepSeconds) : 10,
       committedSchedule: null,
       scheduleDirty: false,
       lastShift: '1 (Pagi)',
@@ -151,6 +152,7 @@
           peak2Interval: legacy.peak2Interval || 3,
           alarmEnabled: legacy.alarmEnabled !== false,
           alarmDuration: legacy.alarmDuration || 8,
+          alarmPrepSeconds: legacy.alarmPrepSeconds !== undefined ? Number(legacy.alarmPrepSeconds) : 10,
           masterUnits: Array.isArray(legacy.masterUnits) ? legacy.masterUnits : undefined,
           departureOrder: Array.isArray(legacy.departureOrder) ? legacy.departureOrder : undefined,
           committedSchedule: legacy.committedSchedule || null,
@@ -700,6 +702,7 @@
       peak2Interval: cur.peak2Interval,
       alarmEnabled: cur.alarmEnabled,
       alarmDuration: cur.alarmDuration,
+      alarmPrepSeconds: cur.alarmPrepSeconds !== undefined ? cur.alarmPrepSeconds : 10,
       masterUnits: cur.masterUnits.map(u => ({ id: 'u_' + Date.now() + Math.random().toString(36).slice(2,6), number: u.number, active: u.active }))
     });
     cloned.departureOrder = cloned.masterUnits.filter(u => u.active).map(u => u.id);
@@ -839,7 +842,8 @@
   const peak1Interval = $('peak1Interval'), peak2Interval = $('peak2Interval'), peakToggle = $('peakToggle');
   const orderFastFirst = $('orderFastFirst'), orderSlowFirst = $('orderSlowFirst');
   const alarmToggle = $('alarmToggle'), alarmDurationInput = $('alarmDuration'),
-        alarmDurMinus = $('alarmDurMinus'), alarmDurPlus = $('alarmDurPlus');
+        alarmDurMinus = $('alarmDurMinus'), alarmDurPlus = $('alarmDurPlus'),
+        alarmPrepInput = $('alarmPrepSeconds'), alarmPrepMinus = $('alarmPrepMinus'), alarmPrepPlus = $('alarmPrepPlus');
 
   function setPeakInputsDisabled(disabled){
     [peak1Start, peak1End, peak2Start, peak2End, peak1Interval, peak2Interval].forEach(el => el.disabled = disabled);
@@ -867,6 +871,16 @@
     alarmDurationInput.disabled = !cur.alarmEnabled;
     alarmDurMinus.disabled = !cur.alarmEnabled;
     alarmDurPlus.disabled = !cur.alarmEnabled;
+
+    if (alarmPrepInput) {
+      const prepVal = cur.alarmPrepSeconds !== undefined ? cur.alarmPrepSeconds : 10;
+      alarmPrepInput.value = prepVal;
+      alarmPrepInput.disabled = !cur.alarmEnabled;
+      const prepLbl = $('alarmPrepLabel');
+      if (prepLbl) prepLbl.textContent = prepVal + ' detik';
+    }
+    if (alarmPrepMinus) alarmPrepMinus.disabled = !cur.alarmEnabled;
+    if (alarmPrepPlus) alarmPrepPlus.disabled = !cur.alarmEnabled;
   }
 
   [ [jamMulai,'jamMulai'], [jamSelesai,'jamSelesai'], [peak1Start,'peak1Start'], [peak1End,'peak1End'],
@@ -965,6 +979,9 @@
       if (alarmDurationInput) alarmDurationInput.disabled = !cur.alarmEnabled;
       if (alarmDurMinus) alarmDurMinus.disabled = !cur.alarmEnabled;
       if (alarmDurPlus) alarmDurPlus.disabled = !cur.alarmEnabled;
+      if (alarmPrepInput) alarmPrepInput.disabled = !cur.alarmEnabled;
+      if (alarmPrepMinus) alarmPrepMinus.disabled = !cur.alarmEnabled;
+      if (alarmPrepPlus) alarmPrepPlus.disabled = !cur.alarmEnabled;
       saveState();
     });
   }
@@ -990,6 +1007,34 @@
       if (alarmDurationInput) {
         alarmDurationInput.value = Math.min(30, (parseInt(alarmDurationInput.value)||1) + 1);
         alarmDurationInput.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  if (alarmPrepInput) {
+    alarmPrepInput.addEventListener('change', () => {
+      let v = Math.max(0, Math.min(60, parseInt(alarmPrepInput.value) || 0));
+      alarmPrepInput.value = v;
+      const cur = getActiveRoute();
+      cur.alarmPrepSeconds = v;
+      const lbl = $('alarmPrepLabel');
+      if (lbl) lbl.textContent = v + ' detik';
+      saveState();
+    });
+  }
+  if (alarmPrepMinus) {
+    alarmPrepMinus.addEventListener('click', () => {
+      if (alarmPrepInput) {
+        alarmPrepInput.value = Math.max(0, (parseInt(alarmPrepInput.value) || 10) - 1);
+        alarmPrepInput.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+  if (alarmPrepPlus) {
+    alarmPrepPlus.addEventListener('click', () => {
+      if (alarmPrepInput) {
+        alarmPrepInput.value = Math.min(60, (parseInt(alarmPrepInput.value) || 10) + 1);
+        alarmPrepInput.dispatchEvent(new Event('change'));
       }
     });
   }
@@ -2181,7 +2226,7 @@
   function startCountdownWarningSound(){
     stopCountdownWarningSound();
     playCountdownWarningBeep();
-    countdownWarningSoundTimer = setInterval(playCountdownWarningBeep, 4000);
+    countdownWarningSoundTimer = setInterval(playCountdownWarningBeep, 2000);
   }
   function stopCountdownWarningSound(){
     if (countdownWarningSoundTimer){ clearInterval(countdownWarningSoundTimer); countdownWarningSoundTimer = null; }
@@ -2214,11 +2259,14 @@
     papanCountdownLabel.textContent = isNow ? 'SEDANG BERANGKAT' : 'BERANGKAT DALAM';
     papanCountdownTime.textContent = mm + ':' + ss;
 
-    const isRedWarning = diffSec <= 60;
+    const cur = getActiveRoute();
+    const prepThreshold = (cur && typeof cur.alarmPrepSeconds === 'number') ? cur.alarmPrepSeconds : 10;
+
+    const isRedWarning = diffSec <= prepThreshold;
     papanCountdownBar.classList.toggle('warning', isRedWarning);
     papanCountdownBar.classList.toggle('yellow-alert', !isRedWarning);
 
-    const shouldSound = diffSec > 0 && diffSec <= 60;
+    const shouldSound = diffSec > 0 && diffSec <= prepThreshold;
     if (shouldSound){
       if (!countdownWarningActive){
         countdownWarningActive = true;

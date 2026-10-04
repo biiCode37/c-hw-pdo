@@ -1494,12 +1494,23 @@
         <span>Bunyikan saat berangkat</span>
         <div class="switch" id="alarmToggle"><div class="knob"></div></div>
       </div>
-      <div class="field" style="margin-bottom:0;">
+      <div class="field" style="margin-bottom:10px;">
         <label for="alarmDuration">Durasi bunyi (detik)</label>
         <div class="stepper">
           <button type="button" id="alarmDurMinus" aria-label="Kurangi durasi">&minus;</button>
           <input type="number" inputmode="numeric" id="alarmDuration" value="8" min="1" max="30">
           <button type="button" id="alarmDurPlus" aria-label="Tambah durasi">+</button>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label for="alarmPrepSeconds">Waktu persiapan sebelum berangkat (detik)</label>
+        <div class="stepper">
+          <button type="button" id="alarmPrepMinus" aria-label="Kurangi waktu persiapan">&minus;</button>
+          <input type="number" inputmode="numeric" id="alarmPrepSeconds" value="10" min="0" max="60">
+          <button type="button" id="alarmPrepPlus" aria-label="Tambah waktu persiapan">+</button>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+          Peringatan bip &amp; bar merah menyala <span id="alarmPrepLabel">10 detik</span> sebelum jam keberangkatan.
         </div>
       </div>
     </div>
